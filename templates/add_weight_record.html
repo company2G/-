@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}添加减脂记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>添加减脂记录</h2>
+    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 返回客户信息
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">客户: {{ client.name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_weight_record', client_id=client.id) }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="record_date" class="form-label">记录日期</label>
+                    <input type="date" class="form-control" id="record_date" name="record_date" required value="{{ today_date }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="morning_weight" class="form-label">早晨体重 (kg)</label>
+                    <input type="number" step="0.1" class="form-control" id="morning_weight" name="morning_weight" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="breakfast" class="form-label">早餐</label>
+                <textarea class="form-control" id="breakfast" name="breakfast" rows="2"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="lunch" class="form-label">中餐</label>
+                <textarea class="form-control" id="lunch" name="lunch" rows="2"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="dinner" class="form-label">晚餐</label>
+                <textarea class="form-control" id="dinner" name="dinner" rows="2"></textarea>
+            </div>
+            
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="defecation" name="defecation">
+                <label class="form-check-label" for="defecation">是否排便</label>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="reset" class="btn btn-outline-secondary me-md-2">重置</button>
+                <button type="submit" class="btn btn-primary">保存记录</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 自动设置今天日期
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('record_date').value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('record_date').value = `${yyyy}-${mm}-${dd}`;
+        }
+    });
+</script>
+{% endblock %} 

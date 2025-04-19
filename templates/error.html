@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}系统错误 - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i> 系统错误</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">抱歉，系统发生了错误</h5>
+                    <p class="card-text">我们的技术团队已经收到了这个错误，并将尽快修复。请稍后再试。</p>
+                    
+                    {% if error and config.DEBUG %}
+                    <div class="alert alert-warning mt-3">
+                        <h6>错误详情 (仅调试模式可见):</h6>
+                        <pre class="mb-0">{{ error }}</pre>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mt-4">
+                        <p>您可以尝试以下操作：</p>
+                        <ul>
+                            <li>刷新页面</li>
+                            <li>清除浏览器缓存</li>
+                            <li>重新登录系统</li>
+                            <li>联系系统管理员</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="row">
+                        <div class="col">
+                            <a href="{{ url_for('client_login') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt mr-1"></i> 返回登录
+                            </a>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ml-2">
+                                <i class="fas fa-home mr-1"></i> 返回首页
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

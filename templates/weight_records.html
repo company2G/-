@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}减脂记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>减脂记录</h2>
+    <div>
+        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> 返回客户信息
+        </a>
+        <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> 添加记录
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">客户: {{ client.name }}</h5>
+            <span class="badge bg-primary">初始体重: {{ client.weight }} kg</span>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>日期</th>
+                        <th>早晨体重</th>
+                        <th>早餐</th>
+                        <th>中餐</th>
+                        <th>晚餐</th>
+                        <th>排便</th>
+                        <th>日变化</th>
+                        <th>总变化</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.record_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ record.morning_weight }} kg</td>
+                        <td>{{ record.breakfast|truncate(15) }}</td>
+                        <td>{{ record.lunch|truncate(15) }}</td>
+                        <td>{{ record.dinner|truncate(15) }}</td>
+                        <td>
+                            {% if record.defecation %}
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.daily_change %}
+                                {% if record.daily_change > 0 %}
+                                <span class="text-danger">+{{ record.daily_change }} kg</span>
+                                {% else %}
+                                <span class="text-success">{{ record.daily_change }} kg</span>
+                                {% endif %}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.total_change %}
+                                {% if record.total_change > 0 %}
+                                <span class="text-danger">+{{ record.total_change }} kg</span>
+                                {% else %}
+                                <span class="text-success">{{ record.total_change }} kg</span>
+                                {% endif %}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-calendar-x" style="font-size: 3rem; color: #ccc;"></i>
+            <p class="mt-3">暂无减脂记录</p>
+            <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-primary">
+                <i class="bi bi-calendar-plus"></i> 添加首条记录
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>禾燃健康 - 客户登录</title>
+    <!-- 本地CSS文件，如果不可用则使用CDN备份 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css';">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .login-container {
+            max-width: 400px;
+            width: 100%;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo-container img {
+            max-width: 150px;
+            height: auto;
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .bottom-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #6c757d;
+        }
+    </style>
+    <!-- CDN备份CSS -->
+    <script>
+        // 检查本地样式是否加载失败，加载CDN备份
+        window.addEventListener('DOMContentLoaded', function() {
+            var cssLoaded = Array.from(document.styleSheets).some(function(sheet) {
+                return sheet.href && sheet.href.includes('bootstrap.min.css');
+            });
+            if (!cssLoaded) {
+                var link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/css/bootstrap.min.css';
+                document.head.appendChild(link);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-container">
+            {% if url_for('static', filename='images/logo.png') %}
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="禾燃健康Logo" onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/default-logo.png') }}'; if(this.naturalWidth === 0) { this.parentNode.innerHTML = '<div class=\'logo-text\'>禾燃健康</div>'; }">
+            {% else %}
+                <div class="logo-text">禾燃健康</div>
+            {% endif %}
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        {{ message|safe }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('client_login') }}">
+            <div class="form-group">
+                <label for="phone">手机号</label>
+                <input type="text" class="form-control" id="phone" name="phone" placeholder="请输入手机号" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码" required>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-success btn-block">登录</button>
+            </div>
+            <div class="links">
+                <a href="{{ url_for('client_register') }}">注册新账户</a>
+                <a href="#" onclick="alert('请联系管理员重置密码')">忘记密码？</a>
+            </div>
+        </form>
+        <div class="bottom-text">
+            禾燃健康 © {{ now().year if now is defined else 2025 }} 版权所有
+        </div>
+    </div>
+
+    <!-- 本地JS文件，如果不可用则使用CDN备份 -->
+    <script src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js';"></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js';"></script>
+    <script>
+        // 自动消失的提示信息
+        $(document).ready(function(){
+            window.setTimeout(function() {
+                $(".alert").fadeTo(500, 0).slideUp(500, function(){
+                    $(this).remove(); 
+                });
+            }, 3000);
+        });
+    </script>
+</body>
+</html> 

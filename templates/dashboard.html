@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}仪表盘 - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1>客户管理</h1>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ url_for('add_client') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> 添加新客户
+            </a>
+            {% if is_admin %}
+            <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary">
+                <i class="bi bi-people"></i> 用户管理
+            </a>
+            <a href="{{ url_for('products') }}" class="btn btn-outline-success">
+                <i class="bi bi-box-seam"></i> 产品管理
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if clients %}
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="mb-0">客户列表</h5>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" id="clientSearch" class="form-control" placeholder="搜索客户姓名或电话...">
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>性别</th>
+                            <th>年龄</th>
+                            <th>电话</th>
+                            {% if is_admin %}
+                            <th>创建者</th>
+                            {% endif %}
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientTable">
+                        {% for client in clients %}
+                        <tr>
+                            <td>{{ client.name }}</td>
+                            <td>{{ client.gender }}</td>
+                            <td>{{ client.age }}</td>
+                            <td>{{ client.phone }}</td>
+                            {% if is_admin %}
+                            <td>{{ client.creator_name if 'creator_name' in client.keys() else '' }}</td>
+                            {% endif %}
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-sm btn-info">
+                                        <i class="bi bi-eye"></i> 查看
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                        更多
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a href="{{ url_for('client_products', client_id=client.id) }}" class="dropdown-item">
+                                                <i class="bi bi-box-seam"></i> 产品管理
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="{{ url_for('view_weight_records', client_id=client.id) }}" class="dropdown-item">
+                                                <i class="bi bi-calendar-check"></i> 减脂记录
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="{{ url_for('view_weight_managements', client_id=client.id) }}" class="dropdown-item">
+                                                <i class="bi bi-graph-up"></i> 体重管理
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a href="{{ url_for('edit_client', client_id=client.id) }}" class="dropdown-item">
+                                                <i class="bi bi-pencil"></i> 编辑资料
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill"></i> 暂无客户信息，请点击"添加新客户"开始使用系统。
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // 客户搜索功能
+    document.getElementById('clientSearch').addEventListener('keyup', function() {
+        var input = this.value.toLowerCase();
+        var rows = document.getElementById('clientTable').getElementsByTagName('tr');
+        
+        for (var i = 0; i < rows.length; i++) {
+            var name = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+            var phone = rows[i].getElementsByTagName('td')[3].textContent.toLowerCase();
+            
+            if (name.indexOf(input) > -1 || phone.indexOf(input) > -1) {
+                rows[i].style.display = "";
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+    });
+</script>
+{% endblock %} 

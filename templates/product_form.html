@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1 class="mb-4">{% if product %}编辑产品{% else %}添加产品{% endif %}</h1>
+        
+        <form method="post" class="needs-validation" novalidate>
+            <div class="mb-3">
+                <label for="name" class="form-label">产品名称</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ product.name if product else '' }}" required>
+                <div class="invalid-feedback">
+                    请输入产品名称
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="price" class="form-label">价格 (元)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="price" name="price" value="{{ "%.2f"|format(product.price) if product else '' }}" required>
+                <div class="invalid-feedback">
+                    请输入有效的价格
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="type" class="form-label">产品类型</label>
+                <select class="form-select" id="type" name="type" required onchange="toggleFields()">
+                    <option value="" disabled {% if not product %}selected{% endif %}>请选择产品类型</option>
+                    <option value="count" {% if product and product.type == 'count' %}selected{% endif %}>次数卡</option>
+                    <option value="period" {% if product and product.type == 'period' %}selected{% endif %}>周期卡</option>
+                </select>
+                <div class="invalid-feedback">
+                    请选择产品类型
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="category" class="form-label">产品分类</label>
+                <select class="form-select" id="category" name="category" required>
+                    <option value="" disabled {% if not product %}selected{% endif %}>请选择产品分类</option>
+                    <option value="体验卡" {% if product and product.category == '体验卡' %}selected{% endif %}>体验卡</option>
+                    <option value="热敷" {% if product and product.category == '热敷' %}selected{% endif %}>热敷</option>
+                    <option value="塑形" {% if product and product.category == '塑形' %}selected{% endif %}>塑形</option>
+                    <option value="疏通" {% if product and product.category == '疏通' %}selected{% endif %}>疏通</option>
+                    <option value="塑形套餐" {% if product and product.category == '塑形套餐' %}selected{% endif %}>塑形套餐</option>
+                    <option value="其他" {% if product and product.category == '其他' %}selected{% endif %}>其他</option>
+                </select>
+                <div class="invalid-feedback">
+                    请选择产品分类
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="details" class="form-label">产品详情</label>
+                <input type="text" class="form-control" id="details" name="details" value="{{ product.details if product else '' }}" placeholder="例如：全身、肩颈、腹、臀、背、大腿、小腿、胳膊等">
+                <div class="form-text">请填写产品的详细说明，例如适用部位、特殊说明等</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label">产品描述</label>
+                <textarea class="form-control" id="description" name="description" rows="3">{{ product.description if product else '' }}</textarea>
+            </div>
+
+            <div class="mb-3" id="validity_days_group">
+                <label for="validity_days" class="form-label">有效期 (天)</label>
+                <input type="number" class="form-control" id="validity_days" name="validity_days" min="0" value="{{ product.validity_days if product else '' }}">
+                <div class="form-text">输入0表示永久有效</div>
+                <div class="invalid-feedback">
+                    请输入有效的天数
+                </div>
+            </div>
+
+            <div class="mb-3" id="sessions_group">
+                <label for="sessions" class="form-label">课时次数</label>
+                <input type="number" class="form-control" id="sessions" name="sessions" min="0" value="{{ product.sessions if product else '' }}">
+                <div class="form-text">留空表示不限次数</div>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between">
+                <a href="{{ url_for('products') }}" class="btn btn-secondary">返回</a>
+                <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 表单验证
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+    
+    // 切换显示表单字段
+    function toggleFields() {
+        var typeSelect = document.getElementById('type');
+        var validityDaysGroup = document.getElementById('validity_days_group');
+        var sessionsGroup = document.getElementById('sessions_group');
+        
+        if (typeSelect.value === 'period') {
+            validityDaysGroup.style.display = 'block';
+            // 对于周期卡，次数输入框可选填
+            document.querySelector('label[for="sessions"]').textContent = '课时次数 (可选)';
+        } else if (typeSelect.value === 'count') {
+            // 对于次数卡，次数输入框必填
+            document.querySelector('label[for="sessions"]').textContent = '课时次数 (必填)';
+            validityDaysGroup.style.display = 'block';
+        }
+    }
+    
+    // 初始化页面时调用一次
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleFields();
+    });
+</script>
+{% endblock %} 

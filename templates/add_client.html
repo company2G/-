@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block title %}添加新客户 - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">添加新客户</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="post" class="mb-5">
+        <!-- 基本信息卡片 -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">基本信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="name">姓名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="gender">性别</label>
+                            <select class="form-control" id="gender" name="gender">
+                                <option value="">请选择</option>
+                                <option value="女">女</option>
+                                <option value="男">男</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="age">年龄</label>
+                            <input type="number" class="form-control" id="age" name="age" min="1" max="120">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="phone">手机号 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="phone" name="phone" required>
+                            <small class="form-text text-muted">手机号将作为客户登录账号</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="address">家庭住址</label>
+                            <input type="text" class="form-control" id="address" name="address">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="workplace">工作单位</label>
+                            <input type="text" class="form-control" id="workplace" name="workplace">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 饮食习惯卡片 -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">饮食习惯</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="breakfast">早餐</label>
+                            <select class="form-control" id="breakfast" name="breakfast">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="不吃">不吃</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="lunch">午餐</label>
+                            <select class="form-control" id="lunch" name="lunch">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="dinner">晚餐</label>
+                            <select class="form-control" id="dinner" name="dinner">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                                <option value="很晚">很晚</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="night_snack">夜宵</label>
+                            <select class="form-control" id="night_snack" name="night_snack">
+                                <option value="">请选择</option>
+                                <option value="不吃">不吃</option>
+                                <option value="极少">极少</option>
+                                <option value="偶尔">偶尔</option>
+                                <option value="经常">经常</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="cold_food">冷饮/冷食</label>
+                            <select class="form-control" id="cold_food" name="cold_food">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="sweet_food">甜食</label>
+                            <select class="form-control" id="sweet_food" name="sweet_food">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="meat">肉类</label>
+                            <select class="form-control" id="meat" name="meat">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="alcohol">饮酒</label>
+                            <select class="form-control" id="alcohol" name="alcohol">
+                                <option value="">请选择</option>
+                                <option value="不喝">不喝</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 身体状况卡片 -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">身体状况</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="constitution">体质</label>
+                            <select class="form-control select2" id="constitution" name="constitution" multiple="multiple">
+                                <option value="怕冷">怕冷</option>
+                                <option value="怕热">怕热</option>
+                                <option value="怕风">怕风</option>
+                                <option value="手脚冰凉">手脚冰凉</option>
+                                <option value="易疲劳">易疲劳</option>
+                                <option value="易出汗">易出汗</option>
+                            </select>
+                            <small class="form-text text-muted">可多选，如：怕冷,怕热</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="water_drinking">饮水情况</label>
+                            <select class="form-control" id="water_drinking" name="water_drinking">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="较少">较少</option>
+                                <option value="较多">较多</option>
+                                <option value="不渴">不渴</option>
+                                <option value="经常口渴">经常口渴</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="sleep">睡眠情况</label>
+                            <select class="form-control" id="sleep" name="sleep">
+                                <option value="">请选择</option>
+                                <option value="良好">良好</option>
+                                <option value="一般">一般</option>
+                                <option value="较差">较差</option>
+                                <option value="失眠">失眠</option>
+                                <option value="易醒">易醒</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="defecation">排便情况</label>
+                            <select class="form-control" id="defecation" name="defecation">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="便秘">便秘</option>
+                                <option value="腹泻">腹泻</option>
+                                <option value="便秘腹泻交替">便秘腹泻交替</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="gynecology">妇科情况</label>
+                            <select class="form-control" id="gynecology" name="gynecology">
+                                <option value="">请选择</option>
+                                <option value="正常">正常</option>
+                                <option value="月经不调">月经不调</option>
+                                <option value="痛经">痛经</option>
+                                <option value="闭经">闭经</option>
+                                <option value="更年期">更年期</option>
+                                <option value="不适用">不适用</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 身体测量卡片 -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">身体测量</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="weight">体重(kg)</label>
+                            <input type="number" step="0.1" class="form-control" id="weight" name="weight" min="20" max="200">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="height">身高(cm)</label>
+                            <input type="number" class="form-control" id="height" name="height" min="100" max="220">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="waist">腰围(cm)</label>
+                            <input type="number" class="form-control" id="waist" name="waist" min="50" max="150">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="hip">臀围(cm)</label>
+                            <input type="number" class="form-control" id="hip" name="hip" min="70" max="150">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="leg">腿围(cm)</label>
+                            <input type="number" class="form-control" id="leg" name="leg" min="20" max="80">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="standard_weight">标准体重(kg)</label>
+                            <input type="number" step="0.1" class="form-control" id="standard_weight" name="standard_weight" min="30" max="100">
+                            <small class="form-text text-muted">自动计算，可手动修改</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="overweight">超重(kg)</label>
+                            <input type="number" step="0.1" class="form-control" id="overweight" name="overweight">
+                            <small class="form-text text-muted">自动计算，可手动修改</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">添加客户</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary ml-2">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 身高改变时自动计算标准体重
+        function calculateStandardWeight() {
+            let height = parseFloat($('#height').val());
+            if (height && height > 100) {
+                let gender = $('#gender').val();
+                let standardWeight;
+                
+                if (gender === '男') {
+                    standardWeight = (height - 100) * 0.9;
+                } else {
+                    standardWeight = (height - 100) * 0.85;
+                }
+                
+                $('#standard_weight').val(standardWeight.toFixed(1));
+                
+                // 如果有体重，自动计算超重值
+                let weight = parseFloat($('#weight').val());
+                if (weight) {
+                    let overweight = weight - standardWeight;
+                    $('#overweight').val(overweight.toFixed(1));
+                }
+            }
+        }
+        
+        // 身高或体重改变时计算
+        $('#height, #gender').change(calculateStandardWeight);
+        $('#weight').change(function() {
+            let weight = parseFloat($(this).val());
+            let standardWeight = parseFloat($('#standard_weight').val());
+            if (weight && standardWeight) {
+                let overweight = weight - standardWeight;
+                $('#overweight').val(overweight.toFixed(1));
+            }
+        });
+        
+        // 手机号验证
+        $('#phone').on('blur', function() {
+            let phone = $(this).val();
+            if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+                $(this).addClass('is-invalid');
+                if (!$(this).next('.invalid-feedback').length) {
+                    $(this).after('<div class="invalid-feedback">请输入正确的手机号码</div>');
+                }
+            } else {
+                $(this).removeClass('is-invalid');
+                $(this).next('.invalid-feedback').remove();
+            }
+        });
+        
+        // 表单提交验证
+        $('form').on('submit', function(e) {
+            let phone = $('#phone').val();
+            if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+                e.preventDefault();
+                $('#phone').addClass('is-invalid');
+                if (!$('#phone').next('.invalid-feedback').length) {
+                    $('#phone').after('<div class="invalid-feedback">请输入正确的手机号码</div>');
+                }
+                $('html, body').animate({
+                    scrollTop: $('#phone').offset().top - 100
+                }, 200);
+            }
+        });
+        
+        // 初始化多选框
+        if ($.fn.select2) {
+            $('.select2').select2({
+                tags: true,
+                tokenSeparators: [',', ' ']
+            });
+        }
+    });
+</script>
+{% endblock %} 

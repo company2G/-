@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}预约详情 - 禾燃客户管理系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .appointment-card {
+        margin-bottom: 1.5rem;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+    }
+    .status-badge {
+        font-size: 0.85rem;
+    }
+    .appointment-detail-row {
+        margin-bottom: 0.5rem;
+    }
+    .appointment-detail-label {
+        font-weight: bold;
+    }
+    .history-list {
+        margin-top: 1.5rem;
+    }
+    .history-item {
+        padding: 0.5rem;
+        border-left: 3px solid #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    .history-item.pending {
+        border-left-color: #ffc107;
+    }
+    .history-item.confirmed {
+        border-left-color: #0d6efd;
+    }
+    .history-item.completed {
+        border-left-color: #198754;
+    }
+    .history-item.cancelled {
+        border-left-color: #dc3545;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 mb-4">预约详情</h1>
+            
+            <div class="card appointment-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">预约信息</h5>
+                    {% if appointment.status == 'pending' %}
+                    <span class="badge bg-warning status-badge">待确认</span>
+                    {% elif appointment.status == 'confirmed' %}
+                    <span class="badge bg-primary status-badge">已确认</span>
+                    {% elif appointment.status == 'completed' %}
+                    <span class="badge bg-success status-badge">已完成</span>
+                    {% elif appointment.status == 'cancelled' %}
+                    <span class="badge bg-secondary status-badge">已取消</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">预约ID</div>
+                        <div class="col-md-9">{{ appointment.id }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">预约日期</div>
+                        <div class="col-md-9">{{ appointment.appointment_date }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">预约时间</div>
+                        <div class="col-md-9">{{ appointment.appointment_time }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">服务项目</div>
+                        <div class="col-md-9">{{ appointment.service_name }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">创建时间</div>
+                        <div class="col-md-9">{{ appointment.created_at }}</div>
+                    </div>
+                    {% if appointment.notes %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">备注</div>
+                        <div class="col-md-9">{{ appointment.notes }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if appointment.status == 'confirmed' %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">确认时间</div>
+                        <div class="col-md-9">{{ appointment.confirmed_time }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if appointment.status == 'completed' %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">确认时间</div>
+                        <div class="col-md-9">{{ appointment.confirmed_time }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">完成时间</div>
+                        <div class="col-md-9">{{ appointment.completed_time }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if appointment.status == 'cancelled' %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">取消时间</div>
+                        <div class="col-md-9">{{ appointment.cancelled_time }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">取消原因</div>
+                        <div class="col-md-9">{{ appointment.cancel_reason }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="action-buttons">
+                        {% if appointment.status == 'pending' %}
+                        <form action="{{ url_for('appointment.confirm_appointment', appointment_id=appointment.id) }}" method="post">
+                            <button type="submit" class="btn btn-primary">确认预约</button>
+                        </form>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            取消预约
+                        </button>
+                        {% elif appointment.status == 'confirmed' %}
+                        <form action="{{ url_for('appointment.complete_appointment', appointment_id=appointment.id) }}" method="post">
+                            <button type="submit" class="btn btn-success">标记为完成</button>
+                        </form>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            取消预约
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('appointment.index') }}" class="btn btn-outline-secondary">返回列表</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card appointment-card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">客户信息</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">客户姓名</div>
+                        <div class="col-md-9">{{ appointment.client_name }}</div>
+                    </div>
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">联系电话</div>
+                        <div class="col-md-9">{{ appointment.client_phone }}</div>
+                    </div>
+                    {% if appointment.remaining_count is not none %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">剩余次数</div>
+                        <div class="col-md-9">{{ appointment.remaining_count }}</div>
+                    </div>
+                    {% endif %}
+                    {% if appointment.expiry_date %}
+                    <div class="row appointment-detail-row">
+                        <div class="col-md-3 appointment-detail-label">有效期至</div>
+                        <div class="col-md-9">{{ appointment.expiry_date }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('view_client', client_id=appointment.client_id) }}" class="btn btn-outline-primary mt-2">
+                        查看客户资料
+                    </a>
+                </div>
+            </div>
+            
+            {% if client_appointments %}
+            <div class="card appointment-card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">历史预约记录</h5>
+                </div>
+                <div class="card-body">
+                    <div class="history-list">
+                        {% for app in client_appointments %}
+                        <div class="history-item {{ app.status }}">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>{{ app.appointment_date }} {{ app.appointment_time }}</strong> - {{ app.service_name }}
+                                </div>
+                                {% if app.status == 'pending' %}
+                                <span class="badge bg-warning status-badge">待确认</span>
+                                {% elif app.status == 'confirmed' %}
+                                <span class="badge bg-primary status-badge">已确认</span>
+                                {% elif app.status == 'completed' %}
+                                <span class="badge bg-success status-badge">已完成</span>
+                                {% elif app.status == 'cancelled' %}
+                                <span class="badge bg-secondary status-badge">已取消</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-1">
+                                <small class="text-muted">创建于: {{ app.created_at }}</small>
+                                {% if app.notes %}
+                                <div><small>备注: {{ app.notes }}</small></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- 取消预约模态框 -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">取消预约</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('appointment.cancel_appointment', appointment_id=appointment.id) }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="cancel_reason" class="form-label">取消原因</label>
+                        <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3" required></textarea>
+                    </div>
+                    <p class="text-danger">注意: 取消后将无法恢复，客户可能会收到取消通知。</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-danger">确认取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

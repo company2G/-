@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}产品管理 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>客户产品管理</h2>
+        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回客户详情
+        </a>
+    </div>
+
+    {% if creator %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill"></i> 此客户由用户 <strong>{{ creator }}</strong> 创建。
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ client.name }} 的产品列表</h5>
+                {% if current_user.is_admin or (not is_client and not current_user.is_client) %}
+                <a href="{{ url_for('add_client_product', client_id=client.id) }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> 添加产品
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>产品名称</th>
+                            <th>类型</th>
+                            <th>分类</th>
+                            <th>购买日期</th>
+                            <th>状态</th>
+                            <th>详细信息</th>
+                            {% if current_user.is_admin or (not is_client and not current_user.is_client) %}
+                            <th>操作</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr class="{% if product.status == 'expired' %}table-warning{% elif product.status == 'used' %}table-secondary{% endif %}">
+                            <td>{{ product.product_name }}</td>
+                            <td>{{ product.product_type }}</td>
+                            <td>{{ product.category }}</td>
+                            <td>{{ product.purchase_date }}</td>
+                            <td>
+                                {% if product.status == 'active' %}
+                                <span class="badge bg-success">有效</span>
+                                {% elif product.status == 'expired' %}
+                                <span class="badge bg-warning text-dark">已过期</span>
+                                {% elif product.status == 'used' %}
+                                <span class="badge bg-secondary">已用完</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.product_type == 'count' %}
+                                剩余: {{ product.remaining_count if product.remaining_count is not none else '不限' }} 次
+                                {% else %}
+                                到期: {{ product.expiry_date if product.expiry_date else '永久' }}
+                                {% endif %}
+                                {% if product.notes %}
+                                <br><small class="text-muted">备注: {{ product.notes }}</small>
+                                {% endif %}
+                            </td>
+                            {% if current_user.is_admin or (not is_client and not current_user.is_client) %}
+                            <td>
+                                {% if product.status == 'active' %}
+                                <a href="{{ url_for('use_client_product', client_id=client.id, client_product_id=product.id) }}" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-circle"></i> 记录使用
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-secondary" disabled>
+                                    <i class="bi bi-x-circle"></i> 已结束
+                                </button>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill"></i> 该客户暂无产品记录。
+                {% if current_user.is_admin or (not is_client and not current_user.is_client) %}
+                <a href="{{ url_for('add_client_product', client_id=client.id) }}">添加产品</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not is_client %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">使用记录</h5>
+        </div>
+        <div class="card-body">
+            <!-- 使用记录内容 可以在此处添加 -->
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill"></i> 点击产品的"记录使用"按钮可以记录客户的产品使用情况。
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

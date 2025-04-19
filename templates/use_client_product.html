@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}记录产品使用 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>记录产品使用</h2>
+        <a href="{{ url_for('client_products', client_id=client.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> 返回产品列表
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">客户信息</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>姓名:</strong> {{ client.name }}</p>
+                    <p><strong>性别:</strong> {{ client.gender }}</p>
+                    <p><strong>电话:</strong> {{ client.phone }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">产品使用记录</h5>
+                </div>
+                <div class="card-body">
+                    <div class="p-3 bg-light rounded mb-4">
+                        <h6 class="mb-2">产品信息：</h6>
+                        <p class="mb-1"><strong>产品名称:</strong> {{ product.product_name }}</p>
+                        <p class="mb-1">
+                            <strong>类型:</strong> 
+                            {% if product.product_type == 'count' %}
+                            次数卡 (剩余 {{ product.remaining_count }} 次)
+                            {% else %}
+                            周期卡 (到期日期: {{ product.expiry_date }})
+                            {% endif %}
+                        </p>
+                        <p class="mb-0"><strong>状态:</strong> {{ product.status }}</p>
+                    </div>
+
+                    <form method="post" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="usage_date" class="form-label">使用日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="usage_date" name="usage_date" value="{{ today }}" required>
+                            <div class="invalid-feedback">请选择使用日期</div>
+                        </div>
+
+                        {% if product.product_type == 'count' %}
+                        <div class="mb-3">
+                            <label for="count_used" class="form-label">使用次数 <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="count_used" name="count_used" value="1" min="1" max="{{ product.remaining_count }}" required>
+                            <div class="invalid-feedback">次数必须在1到{{ product.remaining_count }}之间</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">备注</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="可选：记录使用细节，如使用效果、客户反馈等"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> 记录使用
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> 请注意：
+                <ul>
+                    <li>对于次数卡，记录使用后将减少相应次数</li>
+                    <li>记录提交后不可撤销，请确认信息准确</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 表单验证
+(function() {
+  'use strict';
+  document.addEventListener('DOMContentLoaded', function() {
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+      form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  });
+})();
+</script>
+{% endblock %} 

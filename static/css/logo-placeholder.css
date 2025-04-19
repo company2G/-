@@ -1,0 +1,54 @@
+/* 文本标志占位符样式 */
+.text-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    font-size: 28px;
+    font-weight: bold;
+    color: #34495e;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 6px;
+    padding: 10px 20px;
+    margin: 15px auto;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
+    border: 1px solid #dee2e6;
+    min-width: 200px;
+    min-height: 60px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.text-logo::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: linear-gradient(45deg, rgba(76, 175, 80, 0.1), rgba(33, 150, 243, 0.1));
+    transform: rotate(5deg);
+    z-index: -1;
+}
+
+.text-logo span.highlight {
+    color: #3498db;
+    margin-right: 4px;
+}
+
+.text-logo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 响应式调整 */
+@media (max-width: 576px) {
+    .text-logo {
+        font-size: 22px;
+        padding: 8px 15px;
+        min-width: 160px;
+        min-height: 50px;
+    }
+} 

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}个人中心 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>我的个人中心</h2>
+        <div>
+            {% if not is_client %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回客户列表
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">个人信息</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>姓名:</strong> {{ client.name }}</p>
+                    <p><strong>性别:</strong> {{ client.gender }}</p>
+                    <p><strong>年龄:</strong> {{ client.age }}</p>
+                    <p><strong>电话:</strong> {{ client.phone }}</p>
+                    <p><strong>地址:</strong> {{ client.address or '未填写' }}</p>
+                    <p><strong>工作单位:</strong> {{ client.workplace or '未填写' }}</p>
+                </div>
+                {% if is_client %}
+                <div class="card-footer">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                        <i class="bi bi-box-arrow-right"></i> 退出登录
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">我的产品</h5>
+                </div>
+                <div class="card-body">
+                    {% if products %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>类型</th>
+                                    <th>购买日期</th>
+                                    <th>状态</th>
+                                    <th>剩余次数/到期日期</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>{{ product.product_name }}</td>
+                                    <td>
+                                        {% if product.product_type == 'count' %}
+                                        <span class="badge bg-info">次数卡</span>
+                                        {% else %}
+                                        <span class="badge bg-primary">周期卡</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.purchase_date }}</td>
+                                    <td>
+                                        {% if product.status == 'active' %}
+                                        <span class="badge bg-success">可用</span>
+                                        {% elif product.status == 'expired' %}
+                                        <span class="badge bg-danger">已过期</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">已用完</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.product_type == 'count' %}
+                                        <span class="fw-bold">{{ product.remaining_count }} 次</span>
+                                        {% else %}
+                                        <span class="fw-bold">到期: {{ product.expiry_date }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无产品记录
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">使用记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if usage_records %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>产品</th>
+                                    <th>使用次数</th>
+                                    <th>操作人员</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in usage_records %}
+                                <tr>
+                                    <td>{{ record.usage_date }}</td>
+                                    <td>{{ record.product_name }}</td>
+                                    <td>{{ record.count_used }} 次</td>
+                                    <td>{{ record.operator_name }}</td>
+                                    <td>{{ record.notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 暂无使用记录
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-lightbulb"></i> 您可以使用电话号码作为用户名登录系统查看个人信息和产品使用情况。
+                如需帮助请联系工作人员。
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

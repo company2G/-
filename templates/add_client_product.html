@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}添加产品 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">为客户添加产品</h1>
+    
+    <div class="alert alert-info">
+        <strong>客户信息:</strong> {{ client.name }} ({{ client.phone }})
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="post">
+        <div class="form-group">
+            <label for="product_id">选择产品 <span class="text-danger">*</span></label>
+            <select class="form-control" id="product_id" name="product_id" required>
+                <option value="">-- 请选择产品 --</option>
+                {% if products %}
+                    {% set current_category = '' %}
+                    {% for product in products %}
+                        {% if product.category != current_category %}
+                            {% if current_category != '' %}
+                                </optgroup>
+                            {% endif %}
+                            <optgroup label="{{ product.category }}">
+                            {% set current_category = product.category %}
+                        {% endif %}
+                        <option value="{{ product.id }}">
+                            {{ product.name }} 
+                            {% if product.price %}(¥{{ product.price }}){% endif %}
+                            {% if product.type == 'count' and product.sessions %}
+                                - {{ product.sessions }}次
+                            {% elif product.type == 'period' and product.validity_days %}
+                                - {{ product.validity_days }}天
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                    </optgroup>
+                {% else %}
+                    <option value="" disabled>没有可用产品，请先添加产品</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">备注</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+        </div>
+        
+        <div class="card mt-4 mb-4" id="productDetails" style="display:none;">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">产品详情</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>产品名称:</strong> <span id="productName"></span></p>
+                        <p><strong>产品类型:</strong> <span id="productType"></span></p>
+                        <p><strong>价格:</strong> <span id="productPrice"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>分类:</strong> <span id="productCategory"></span></p>
+                        <p id="productSessionRow"><strong>使用次数:</strong> <span id="productSessions"></span></p>
+                        <p id="productValidityRow"><strong>有效期:</strong> <span id="productValidity"></span></p>
+                    </div>
+                </div>
+                <p><strong>描述:</strong> <span id="productDescription"></span></p>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">添加产品</button>
+            <a href="{{ url_for('client_products', client_id=client.id) }}" class="btn btn-secondary ml-2">取消</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // 当选择产品时显示产品详情
+    $(document).ready(function() {
+        // 准备产品数据
+        const products = {
+            {% for product in products %}
+                "{{ product.id }}": {
+                    "name": "{{ product.name }}",
+                    "type": "{{ product.type }}",
+                    "price": "{{ product.price }}",
+                    "category": "{{ product.category }}",
+                    "description": "{{ product.description|default('无描述')|safe }}",
+                    "sessions": "{{ product.sessions }}",
+                    "validity_days": "{{ product.validity_days }}"
+                }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+        
+        // 监听产品选择变化
+        $('#product_id').change(function() {
+            const productId = $(this).val();
+            
+            if (productId && products[productId]) {
+                const product = products[productId];
+                
+                // 填充产品详情
+                $('#productName').text(product.name);
+                $('#productType').text(product.type === 'count' ? '次数卡' : '期限卡');
+                $('#productPrice').text('¥' + product.price);
+                $('#productCategory').text(product.category);
+                $('#productDescription').text(product.description);
+                
+                if (product.type === 'count') {
+                    $('#productSessions').text(product.sessions + '次');
+                    $('#productSessionRow').show();
+                    $('#productValidityRow').hide();
+                } else {
+                    $('#productValidity').text(product.validity_days + '天');
+                    $('#productValidityRow').show();
+                    $('#productSessionRow').hide();
+                }
+                
+                // 显示产品详情卡片
+                $('#productDetails').fadeIn();
+            } else {
+                // 隐藏产品详情卡片
+                $('#productDetails').hide();
+            }
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="text-center py-5">
+    <h1 class="display-4 mb-4">欢迎使用禾燃客户管理系统</h1>
+    <p class="lead mb-5">这是一个专业的客户档案和体重管理系统，帮助您高效地管理客户信息并跟踪减脂进度</p>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="d-grid gap-3">
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">登录系统</a>
+                <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">新用户注册</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-lines-fill text-primary" style="font-size: 3rem;"></i>
+                <h4 class="card-title mt-3">客户信息管理</h4>
+                <p class="card-text">全面记录客户的基本信息、饮食习惯和身体状况，建立完整的客户档案</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-data text-primary" style="font-size: 3rem;"></i>
+                <h4 class="card-title mt-3">减脂记录跟踪</h4>
+                <p class="card-text">详细记录每日减脂情况，包括体重变化、饮食记录和排便情况</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up text-primary" style="font-size: 3rem;"></i>
+                <h4 class="card-title mt-3">体重管理分析</h4>
+                <p class="card-text">跟踪体重变化和身体围度数据，帮助客户有效管理体重</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

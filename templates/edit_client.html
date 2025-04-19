@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑客户 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>编辑客户信息</h2>
+    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 返回客户信息
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('edit_client', client_id=client.id) }}">
+            <!-- 基本信息 -->
+            <div class="form-section">
+                <h4 class="mb-3">基本信息</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="name" class="form-label">姓名</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ client.name }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">性别</label>
+                        <select class="form-select" id="gender" name="gender" required>
+                            <option value="">请选择</option>
+                            <option value="男" {% if client.gender == '男' %}selected{% endif %}>男</option>
+                            <option value="女" {% if client.gender == '女' %}selected{% endif %}>女</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="age" class="form-label">年龄</label>
+                        <input type="number" class="form-control" id="age" name="age" min="1" max="120" value="{{ client.age }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="phone" class="form-label">电话</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" value="{{ client.phone }}" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">家庭住址</label>
+                    <input type="text" class="form-control" id="address" name="address" value="{{ client.address }}">
+                </div>
+                <div class="mb-3">
+                    <label for="workplace" class="form-label">工作单位</label>
+                    <input type="text" class="form-control" id="workplace" name="workplace" value="{{ client.workplace }}">
+                </div>
+            </div>
+
+            <!-- 日常饮食情况 -->
+            <div class="form-section">
+                <h4 class="mb-3">日常饮食情况</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="breakfast" class="form-label">早餐</label>
+                        <select class="form-select" id="breakfast" name="breakfast">
+                            <option value="正常" {% if client.breakfast == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.breakfast == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.breakfast == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.breakfast == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="lunch" class="form-label">中餐</label>
+                        <select class="form-select" id="lunch" name="lunch">
+                            <option value="正常" {% if client.lunch == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.lunch == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.lunch == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.lunch == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="dinner" class="form-label">晚餐</label>
+                        <select class="form-select" id="dinner" name="dinner">
+                            <option value="正常" {% if client.dinner == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.dinner == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.dinner == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.dinner == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="night_snack" class="form-label">夜宵</label>
+                        <select class="form-select" id="night_snack" name="night_snack">
+                            <option value="正常" {% if client.night_snack == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.night_snack == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.night_snack == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.night_snack == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="cold_food" class="form-label">食物寒凉</label>
+                        <select class="form-select" id="cold_food" name="cold_food">
+                            <option value="正常" {% if client.cold_food == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.cold_food == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.cold_food == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.cold_food == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="sweet_food" class="form-label">甜食</label>
+                        <select class="form-select" id="sweet_food" name="sweet_food">
+                            <option value="正常" {% if client.sweet_food == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.sweet_food == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.sweet_food == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.sweet_food == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="meat" class="form-label">肉类</label>
+                        <select class="form-select" id="meat" name="meat">
+                            <option value="正常" {% if client.meat == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.meat == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.meat == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.meat == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="alcohol" class="form-label">饮酒</label>
+                        <select class="form-select" id="alcohol" name="alcohol">
+                            <option value="正常" {% if client.alcohol == '正常' %}selected{% endif %}>正常</option>
+                            <option value="偶尔" {% if client.alcohol == '偶尔' %}selected{% endif %}>偶尔</option>
+                            <option value="极少" {% if client.alcohol == '极少' %}selected{% endif %}>极少</option>
+                            <option value="不吃" {% if client.alcohol == '不吃' %}selected{% endif %}>不吃</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 身体状况 -->
+            <div class="form-section">
+                <h4 class="mb-3">身体状况</h4>
+                
+                <div class="mb-3">
+                    <label class="form-label">个人体质（多选）</label>
+                    {% set constitution_list = client.constitution.split(',') if client.constitution else [] %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="constitution" value="怕冷" id="constitution_cold" {% if '怕冷' in constitution_list %}checked{% endif %}>
+                        <label class="form-check-label" for="constitution_cold">怕冷</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="constitution" value="怕热" id="constitution_hot" {% if '怕热' in constitution_list %}checked{% endif %}>
+                        <label class="form-check-label" for="constitution_hot">怕热</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="constitution" value="发冷" id="constitution_feel_cold" {% if '发冷' in constitution_list %}checked{% endif %}>
+                        <label class="form-check-label" for="constitution_feel_cold">发冷</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="constitution" value="发热" id="constitution_feel_hot" {% if '发热' in constitution_list %}checked{% endif %}>
+                        <label class="form-check-label" for="constitution_feel_hot">发热</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="constitution" value="怕风" id="constitution_wind" {% if '怕风' in constitution_list %}checked{% endif %}>
+                        <label class="form-check-label" for="constitution_wind">怕风</label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">饮水情况（多选）</label>
+                    {% set water_list = client.water_drinking.split(',') if client.water_drinking else [] %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="water_drinking" value="热饮" id="water_hot" {% if '热饮' in water_list %}checked{% endif %}>
+                        <label class="form-check-label" for="water_hot">热饮</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="water_drinking" value="冷饮" id="water_cold" {% if '冷饮' in water_list %}checked{% endif %}>
+                        <label class="form-check-label" for="water_cold">冷饮</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="water_drinking" value="不渴" id="water_not_thirsty" {% if '不渴' in water_list %}checked{% endif %}>
+                        <label class="form-check-label" for="water_not_thirsty">不渴</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="water_drinking" value="量多" id="water_much" {% if '量多' in water_list %}checked{% endif %}>
+                        <label class="form-check-label" for="water_much">量多</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="water_drinking" value="量少" id="water_little" {% if '量少' in water_list %}checked{% endif %}>
+                        <label class="form-check-label" for="water_little">量少</label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">睡眠情况（多选）</label>
+                    {% set sleep_list = client.sleep.split(',') if client.sleep else [] %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="sleep" value="易睡" id="sleep_easy" {% if '易睡' in sleep_list %}checked{% endif %}>
+                        <label class="form-check-label" for="sleep_easy">易睡</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="sleep" value="多梦" id="sleep_dream" {% if '多梦' in sleep_list %}checked{% endif %}>
+                        <label class="form-check-label" for="sleep_dream">多梦</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="sleep" value="失眠" id="sleep_insomnia" {% if '失眠' in sleep_list %}checked{% endif %}>
+                        <label class="form-check-label" for="sleep_insomnia">失眠</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="sleep" value="嗜睡" id="sleep_excessive" {% if '嗜睡' in sleep_list %}checked{% endif %}>
+                        <label class="form-check-label" for="sleep_excessive">嗜睡</label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">大便情况（多选）</label>
+                    {% set defecation_list = client.defecation.split(',') if client.defecation else [] %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="defecation" value="正常" id="defecation_normal" {% if '正常' in defecation_list %}checked{% endif %}>
+                        <label class="form-check-label" for="defecation_normal">正常</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="defecation" value="便秘" id="defecation_constipation" {% if '便秘' in defecation_list %}checked{% endif %}>
+                        <label class="form-check-label" for="defecation_constipation">便秘</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="defecation" value="拉稀" id="defecation_diarrhea" {% if '拉稀' in defecation_list %}checked{% endif %}>
+                        <label class="form-check-label" for="defecation_diarrhea">拉稀</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="defecation" value="多次" id="defecation_frequent" {% if '多次' in defecation_list %}checked{% endif %}>
+                        <label class="form-check-label" for="defecation_frequent">多次</label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="gynecology" class="form-label">妇科情况</label>
+                    <textarea class="form-control" id="gynecology" name="gynecology" rows="3">{{ client.gynecology }}</textarea>
+                </div>
+            </div>
+
+            <!-- 体型数据 -->
+            <div class="form-section">
+                <h4 class="mb-3">体型数据</h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="weight" class="form-label">体重(kg)</label>
+                        <input type="number" step="0.1" class="form-control" id="weight" name="weight" value="{{ client.weight }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="height" class="form-label">身高(cm)</label>
+                        <input type="number" step="0.1" class="form-control" id="height" name="height" value="{{ client.height }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="waist" class="form-label">腰围(cm)</label>
+                        <input type="number" step="0.1" class="form-control" id="waist" name="waist" value="{{ client.waist }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="hip" class="form-label">臀围(cm)</label>
+                        <input type="number" step="0.1" class="form-control" id="hip" name="hip" value="{{ client.hip }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="leg" class="form-label">腿围(cm)</label>
+                        <input type="number" step="0.1" class="form-control" id="leg" name="leg" value="{{ client.leg }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary me-md-2">取消</a>
+                <button type="submit" class="btn btn-primary">保存更改</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

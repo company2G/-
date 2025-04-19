@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">添加服务项目</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="name" class="form-label">服务名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="category" class="form-label">服务类别 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="category" name="category" required>
+                        <option value="">-- 请选择 --</option>
+                        <option value="美体">美体</option>
+                        <option value="面部">面部</option>
+                        <option value="营养">营养</option>
+                        <option value="减重">减重</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="duration" class="form-label">服务时长(分钟) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="duration" name="duration" min="1" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">服务描述</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
+                    <label class="form-check-label" for="is_active">启用此服务</label>
+                </div>
+                
+                <div class="d-flex">
+                    <button type="submit" class="btn btn-primary me-2">保存</button>
+                    <a href="{{ url_for('services') }}" class="btn btn-secondary">取消</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

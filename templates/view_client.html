@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}客户详情 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>客户详情</h2>
+        <div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> 返回客户列表
+            </a>
+            <div class="btn-group">
+                <a href="{{ url_for('edit_client', client_id=client.id) }}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> 编辑信息
+                </a>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                    <i class="bi bi-trash"></i> 删除客户
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin and creator %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill"></i> 此客户由用户 <strong>{{ client.creator_name or '未知用户' }}</strong> 创建。
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">基本信息</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>姓名:</strong> {{ client.name }}</p>
+                    <p><strong>性别:</strong> {{ client.gender }}</p>
+                    <p><strong>年龄:</strong> {{ client.age }}</p>
+                    <p><strong>电话:</strong> {{ client.phone }}</p>
+                    <p><strong>地址:</strong> {{ client.address or '未填写' }}</p>
+                    <p><strong>工作单位:</strong> {{ client.workplace or '未填写' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">饮食情况</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>早餐:</strong> {{ client.breakfast }}</p>
+                    <p><strong>中餐:</strong> {{ client.lunch }}</p>
+                    <p><strong>晚餐:</strong> {{ client.dinner }}</p>
+                    <p><strong>夜宵:</strong> {{ client.night_snack }}</p>
+                    <p><strong>寒凉食物:</strong> {{ client.cold_food }}</p>
+                    <p><strong>甜食:</strong> {{ client.sweet_food }}</p>
+                    <p><strong>肉类:</strong> {{ client.meat }}</p>
+                    <p><strong>饮酒:</strong> {{ client.alcohol }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">身体状况</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>个人体质:</strong> {{ client.constitution or '未记录' }}</p>
+                    <p><strong>饮水情况:</strong> {{ client.water_drinking or '未记录' }}</p>
+                    <p><strong>睡眠情况:</strong> {{ client.sleep or '未记录' }}</p>
+                    <p><strong>大便情况:</strong> {{ client.defecation or '未记录' }}</p>
+                    <p><strong>妇科情况:</strong> {{ client.gynecology or '未记录' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">体型数据</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <p><strong>体重:</strong> {{ client.weight or '未记录' }} kg</p>
+                            <p><strong>身高:</strong> {{ client.height or '未记录' }} cm</p>
+                            <p><strong>标准体重:</strong> {{ client.standard_weight or '未记录' }} kg</p>
+                            <p><strong>超重:</strong> {{ client.overweight or '未记录' }} kg</p>
+                        </div>
+                        <div class="col-6">
+                            <p><strong>腰围:</strong> {{ client.waist or '未记录' }} cm</p>
+                            <p><strong>臀围:</strong> {{ client.hip or '未记录' }} cm</p>
+                            <p><strong>腿围:</strong> {{ client.leg or '未记录' }} cm</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">数据管理</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('client_products', client_id=client.id) }}" class="btn btn-primary">
+                            <i class="fas fa-box-seam"></i> 产品管理
+                        </a>
+                        <a href="{{ url_for('add_client_product', client_id=client.id) }}" class="btn btn-success">
+                            <i class="fas fa-plus-circle"></i> 添加产品
+                        </a>
+                        <hr>
+                        <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-info">
+                            <i class="fas fa-plus-circle"></i> 添加减脂记录
+                        </a>
+                        <a href="{{ url_for('view_weight_records', client_id=client.id) }}" class="btn btn-outline-info">
+                            <i class="fas fa-calendar-week"></i> 查看所有减脂记录
+                        </a>
+                        <hr>
+                        <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-warning">
+                            <i class="fas fa-plus-circle"></i> 添加体重管理记录
+                        </a>
+                        <a href="{{ url_for('view_weight_managements', client_id=client.id) }}" class="btn btn-outline-warning">
+                            <i class="fas fa-graph-up"></i> 查看所有体重管理记录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="bi bi-lightbulb"></i> 客户登录信息：
+        <ul>
+            <li>该客户可以使用电话号码 <strong>{{ client.phone }}</strong> 作为用户名和初始密码登录系统查看个人信息和产品使用情况。</li>
+            <li>如需重置密码，请联系管理员。</li>
+        </ul>
+    </div>
+
+    <!-- 管理员和创建者权限提示 -->
+    <div class="alert alert-info">
+        <strong>权限信息:</strong>
+        {% if is_admin %}
+        <span class="badge bg-danger">管理员</span>
+        {% endif %}
+        {% if is_creator %}
+        <span class="badge bg-success">创建者</span>
+        {% endif %}
+        {% if can_manage %}
+        <span class="badge bg-primary">可管理</span>
+        {% else %}
+        <span class="badge bg-secondary">仅查看</span>
+        {% endif %}
+    </div>
+
+    <!-- 删除确认对话框 -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteModalLabel">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>您确定要删除客户 <strong>{{ client.name }}</strong> 的所有信息吗？</p>
+                    <p class="text-danger"><strong>警告：</strong>此操作将同时删除该客户的所有减脂记录、体重管理记录和产品记录，且无法恢复！</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <form action="{{ url_for('delete_client', client_id=client.id) }}" method="post">
+                        <button type="submit" class="btn btn-danger">确认删除</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 客户操作按钮 -->
+    <div class="btn-toolbar mb-3" role="toolbar">
+        {% if can_manage %}
+        <div class="btn-group mr-2">
+            <a href="{{ url_for('edit_client', client_id=client.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> 编辑客户
+            </a>
+        </div>
+        <div class="btn-group mr-2">
+            <a href="{{ url_for('add_client_product', client_id=client.id) }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> 添加产品
+            </a>
+        </div>
+        <div class="btn-group mr-2">
+            <a href="{{ url_for('client_products', client_id=client.id) }}" class="btn btn-info">
+                <i class="fas fa-box-open"></i> 产品管理
+            </a>
+        </div>
+        <div class="btn-group mr-2">
+            <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-secondary">
+                <i class="fas fa-weight"></i> 添加体重记录
+            </a>
+        </div>
+        {% endif %}
+        
+        {% if is_admin %}
+        <div class="btn-group">
+            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteClientModal">
+                <i class="fas fa-trash"></i> 删除客户
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 如果是被查看的客户，显示创建者信息 -->
+    {% if creator %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> 此客户由 <strong>{{ client.creator_name or '未知用户' }}</strong> 创建
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,812 @@
+{% extends 'base.html' %}
+
+{% block title %}客户仪表盘 - 禾燃客户管理系统{% endblock %}
+
+{% block extra_css %}
+{{ super() }}
+<style>
+    .dashboard-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .dashboard-card {
+        height: 100%;
+        transition: transform 0.2s;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .card-counter {
+        background-color: #fff;
+        padding: 20px 10px;
+        border-radius: 5px;
+        transition: .3s linear all;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    .card-counter i {
+        font-size: 5em;
+        opacity: 0.2;
+    }
+    .card-counter .count-numbers {
+        position: absolute;
+        right: 35px;
+        top: 20px;
+        font-size: 32px;
+        display: block;
+    }
+    .card-counter .count-name {
+        position: absolute;
+        right: 35px;
+        top: 65px;
+        font-style: italic;
+        text-transform: capitalize;
+        opacity: 0.7;
+        display: block;
+    }
+    .card-counter.primary {
+        background-color: #007bff;
+        color: #FFF;
+    }
+    .card-counter.success {
+        background-color: #28a745;
+        color: #FFF;
+    }
+    .card-counter.warning {
+        background-color: #ffc107;
+        color: #FFF;
+    }
+    .card-counter.danger {
+        background-color: #dc3545;
+        color: #FFF;
+    }
+    .card-counter.info {
+        background-color: #17a2b8;
+        color: #FFF;
+    }
+    .badge-expired {
+        background-color: #dc3545;
+        color: white;
+    }
+    .badge-valid {
+        background-color: #28a745;
+        color: white;
+    }
+    .badge-pending {
+        background-color: #ffc107;
+        color: black;
+    }
+    .badge-confirmed {
+        background-color: #17a2b8;
+        color: white;
+    }
+    .badge-completed {
+        background-color: #28a745;
+        color: white;
+    }
+    .badge-cancelled {
+        background-color: #6c757d;
+        color: white;
+    }
+    .positive-change {
+        color: red;
+    }
+    .negative-change {
+        color: green;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    .weight-label {
+        font-weight: bold;
+        color: #343a40;
+    }
+    .weight-value {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+    .weight-change {
+        font-size: 0.9em;
+        font-weight: normal;
+    }
+    .no-data-message {
+        padding: 20px;
+        text-align: center;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        color: #6c757d;
+    }
+    .client-greeting {
+        font-size: 1.5em;
+        margin-bottom: 15px;
+    }
+    .badge-pill.badge-primary {
+        color: white;
+        background-color: #007bff;
+        font-weight: bold;
+        font-size: 0.9em;
+    }
+    .text-muted {
+        color: #495057 !important;
+        font-weight: 500;
+    }
+    .badge-expired {
+        background-color: #dc3545;
+        color: white;
+        padding: 0.35em 0.65em;
+        border-radius: 0.25rem;
+    }
+    .badge-valid {
+        background-color: #28a745;
+        color: white;
+        padding: 0.35em 0.65em;
+        border-radius: 0.25rem;
+    }
+    .negative-change {
+        color: #28a745;  /* 绿色表示减重，正面效果 */
+        font-weight: bold;
+    }
+    .positive-change {
+        color: #dc3545;  /* 红色表示增重，负面效果 */
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block head %}
+{{ super() }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="client-greeting">您好，{{ client.name|default('尊敬的客户') }}！</h2>
+                <p class="text-muted">欢迎回到您的个人仪表盘</p>
+            </div>
+            <div class="col-md-4 text-md-right">
+                <button class="btn btn-outline-primary" id="refreshDashboard">
+                    <i class="fas fa-sync-alt"></i> 刷新数据
+                </button>
+                <div class="dropdown d-inline-block ml-2">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="actionMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-cog"></i> 设置
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="actionMenu">
+                        <a class="dropdown-item" href="javascript:void(0)" onclick="$('#changePasswordModal').modal('show')">
+                            <i class="fas fa-key"></i> 修改密码
+                        </a>
+                        <a class="dropdown-item" href="{{ url_for('client_logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 摘要卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card-counter primary">
+                <i class="fas fa-box-open"></i>
+                <span class="count-numbers">{{ products|default([])|length }}</span>
+                <span class="count-name">有效产品</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-counter success">
+                <i class="fas fa-calendar-check"></i>
+                <span class="count-numbers">{{ appointments|default([])|length }}</span>
+                <span class="count-name">预约记录</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-counter info">
+                <i class="fas fa-history"></i>
+                <span class="count-numbers">{{ usage_records|default([])|length }}</span>
+                <span class="count-name">使用记录</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-counter warning">
+                <i class="fas fa-weight"></i>
+                <span class="count-numbers">{{ weight_records|default([])|length }}</span>
+                <span class="count-name">体重记录</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 产品信息 -->
+        <div class="col-md-6 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-box-open"></i> 我的产品</h5>
+                </div>
+                <div class="card-body">
+                    {% if products and products|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>剩余次数/有效期</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>{{ product.product_name }}</td>
+                                    <td>
+                                        {% if product.remaining_count is not none %}
+                                            <span class="badge badge-pill badge-primary">剩余 {{ product.remaining_count }} 次</span>
+                                        {% endif %}
+                                        {% if product.expiry_date %}
+                                            <br>
+                                            <small class="text-muted">有效期至: {{ product.expiry_date }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.status == 'expired' %}
+                                            <span class="badge badge-expired">已过期</span>
+                                        {% elif product.status == 'used' %}
+                                            <span class="badge badge-expired">已用完</span>
+                                        {% else %}
+                                            <span class="badge badge-valid">有效</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> 您目前没有任何产品</p>
+                        <p>请联系管理员添加产品</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary" onclick="$('#productDetailModal').modal('show')">
+                        <i class="fas fa-list"></i> 查看所有产品详情
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预约信息 -->
+        <div class="col-md-6 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> 我的预约</h5>
+                </div>
+                <div class="card-body">
+                    {% if appointments and appointments|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>时间</th>
+                                    <th>项目</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in appointments %}
+                                <tr>
+                                    <td>{{ appointment.appointment_date }}</td>
+                                    <td>{{ appointment.appointment_time }}</td>
+                                    <td>{{ appointment.service_name|default("未指定") }}</td>
+                                    <td>
+                                        {% if appointment.status == 'pending' %}
+                                            <span class="badge badge-pending">待确认</span>
+                                        {% elif appointment.status == 'confirmed' %}
+                                            <span class="badge badge-confirmed">已确认</span>
+                                        {% elif appointment.status == 'completed' %}
+                                            <span class="badge badge-completed">已完成</span>
+                                        {% elif appointment.status == 'cancelled' %}
+                                            <span class="badge badge-cancelled">已取消</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">{{ appointment.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> 您目前没有任何预约</p>
+                        <p>点击下方按钮预约服务</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary" onclick="$('#createAppointmentModal').modal('show')">
+                        <i class="fas fa-plus"></i> 预约服务
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 体重记录 -->
+        <div class="col-md-6 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-weight"></i> 体重记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if weight_records and weight_records|length > 0 %}
+                    <div class="chart-container">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col text-center">
+                            <div class="mb-1 weight-label">初始体重</div>
+                            {% if weight_records[-1] %}
+                            <div class="weight-value">{{ weight_records[-1].weight }} kg</div>
+                            {% else %}
+                            <div class="weight-value">--</div>
+                            {% endif %}
+                        </div>
+                        <div class="col text-center">
+                            <div class="mb-1 weight-label">当前体重</div>
+                            {% if weight_records[0] %}
+                            <div class="weight-value">{{ weight_records[0].weight }} kg</div>
+                            {% else %}
+                            <div class="weight-value">--</div>
+                            {% endif %}
+                        </div>
+                        <div class="col text-center">
+                            <div class="mb-1 weight-label">总变化</div>
+                            {% if weight_records[0] and weight_records[-1] and weight_records[0].total_change is not none %}
+                                <div class="weight-value">
+                                {% if weight_records[0].total_change == 0 %}
+                                    <span>{{ weight_records[0].total_change }} kg</span>
+                                {% elif weight_records[0].total_change < 0 %}
+                                    <span class="negative-change">{{ weight_records[0].total_change }} kg</span>
+                                {% else %}
+                                    <span class="positive-change">+{{ weight_records[0].total_change }} kg</span>
+                                {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="weight-value">--</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> 您目前没有任何体重记录</p>
+                        <p>请联系管理员添加体重记录</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-list"></i> 查看详细体重记录
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品使用记录 -->
+        <div class="col-md-6 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> 使用记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if usage_records and usage_records|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>产品</th>
+                                    <th>使用次数</th>
+                                    <th>操作员</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in usage_records %}
+                                <tr>
+                                    <td>{{ record.usage_date }}</td>
+                                    <td>{{ record.product_name|default("未知产品") }}</td>
+                                    <td>{{ record.count_used|default(1) }}</td>
+                                    <td>{{ record.operator_name|default("系统") }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> 您目前没有任何使用记录</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white text-center">
+                    <a href="#" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-list"></i> 查看所有使用记录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改密码模态框 -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">修改密码</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm" method="post" action="{{ url_for('client_change_password') }}">
+                    <div class="form-group">
+                        <label for="currentPassword">当前密码</label>
+                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">新密码</label>
+                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">确认新密码</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="submitChangePassword">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 预约模态框 -->
+<div class="modal fade" id="createAppointmentModal" tabindex="-1" aria-labelledby="createAppointmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createAppointmentModalLabel">预约服务</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="appointmentForm" action="{{ url_for('create_appointment') }}" method="post">
+                    <div class="form-group">
+                        <label for="appointmentDate">日期</label>
+                        <input type="date" class="form-control" id="appointmentDate" name="appointment_date" required onchange="onDateChange(this)">
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentTime">时间</label>
+                        <select class="form-control" id="appointmentTime" name="appointment_time" required>
+                            <option value="">请选择时间</option>
+                            <!-- 时间选项会通过AJAX动态加载 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceType">服务类型</label>
+                        <select class="form-control" id="serviceType" name="service_type" required>
+                            <option value="咨询">咨询</option>
+                            <option value="减重">减重</option>
+                            <option value="营养评估">营养评估</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceProduct">使用产品/服务</label>
+                        <select class="form-control" id="serviceProduct" name="client_product_id">
+                            <option value="no_product">不使用产品(付费服务)</option>
+                            {% for product in products %}
+                                {% if product.status == 'active' and (product.remaining_count is none or product.remaining_count > 0) %}
+                                <option value="{{ product.id }}">{{ product.product_name }} {% if product.remaining_count is not none %}(剩余{{ product.remaining_count }}次){% endif %}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentNote">备注</label>
+                        <textarea class="form-control" id="appointmentNote" name="additional_notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitAppointment()">提交预约</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 产品详情模态框 -->
+<div class="modal fade" id="productDetailModal" tabindex="-1" aria-labelledby="productDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productDetailModalLabel">产品详情</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                {% if products and products|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>产品名称</th>
+                                <th>类型</th>
+                                <th>剩余次数</th>
+                                <th>购买日期</th>
+                                <th>有效期至</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>{{ product.product_name }}</td>
+                                <td>{{ product.product_type|default('未知') }}</td>
+                                <td>{% if product.remaining_count is not none %}{{ product.remaining_count }}{% else %}不限{% endif %}</td>
+                                <td>{{ product.purchase_date|default(product.created_at)|default('-') }}</td>
+                                <td>{{ product.expiry_date|default('-') }}</td>
+                                <td>
+                                    {% if product.status == 'expired' %}
+                                        <span class="badge badge-expired">已过期</span>
+                                    {% elif product.status == 'used' %}
+                                        <span class="badge badge-expired">已用完</span>
+                                    {% else %}
+                                        <span class="badge badge-valid">有效</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="no-data-message">
+                    <p><i class="fas fa-info-circle"></i> 您目前没有任何产品</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+<script>
+    $(document).ready(function() {
+        console.log('jQuery已加载，文档已就绪');
+        
+        // 修复模态框点击问题
+        $('#productDetailModal, #createAppointmentModal, #changePasswordModal').each(function(){
+            console.log('初始化模态框:', $(this).attr('id'));
+        });
+        
+        // 修复设置下拉菜单
+        $('.dropdown-toggle').dropdown();
+        
+        // 修复预约服务按钮
+        $('[data-target="#createAppointmentModal"]').on('click', function(e) {
+            e.preventDefault();
+            console.log('点击预约服务');
+            $('#createAppointmentModal').modal('show');
+        });
+        
+        // 修复产品详情按钮
+        $('[data-target="#productDetailModal"]').on('click', function(e) {
+            e.preventDefault();
+            console.log('点击产品详情');
+            $('#productDetailModal').modal('show');
+        });
+        
+        // 修复修改密码按钮
+        $('[data-target="#changePasswordModal"]').on('click', function(e) {
+            e.preventDefault();
+            console.log('点击修改密码');
+            $('#changePasswordModal').modal('show');
+        });
+        
+        // 预约表单提交
+        $('#submitAppointment').on('click', function() {
+            const form = document.getElementById('appointmentForm');
+            const formData = new FormData(form);
+            
+            $.ajax({
+                url: form.action,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        alert('预约创建成功');
+                        $('#createAppointmentModal').modal('hide');
+                        setTimeout(function() { 
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alert(response.message || '预约创建失败');
+                    }
+                },
+                error: function() {
+                    alert('请求失败，请稍后再试');
+                }
+            });
+        });
+    });
+</script>
+
+<!-- 添加提交函数 -->
+<script>
+function submitAppointment() {
+    console.log('提交预约');
+    
+    // 获取表单数据
+    var form = document.getElementById('appointmentForm');
+    var date = document.getElementById('appointmentDate').value;
+    var time = document.getElementById('appointmentTime').value;
+    var type = document.getElementById('serviceType').value;
+    
+    // 简单验证
+    if (!date || !time || !type) {
+        alert('请填写所有必填字段');
+        return;
+    }
+    
+    // 创建FormData对象
+    var formData = new FormData(form);
+    
+    // 禁用按钮，显示加载状态
+    var submitBtn = form.parentNode.parentNode.querySelector('.btn-primary');
+    var originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 提交中...';
+    submitBtn.disabled = true;
+    
+    // 发送请求
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', form.action || '/client/appointment/create');
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                var response = JSON.parse(xhr.responseText);
+                if (response.success) {
+                    alert('预约创建成功');
+                    $('#createAppointmentModal').modal('hide');
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert(response.message || '预约创建失败');
+                }
+            } catch (e) {
+                alert('请求成功但响应格式错误');
+                console.error('解析响应时出错:', e);
+            }
+        } else {
+            alert('请求失败: ' + xhr.status);
+        }
+        
+        // 恢复按钮状态
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    };
+    xhr.onerror = function() {
+        alert('请求错误，请稍后再试');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    };
+    xhr.send(formData);
+}
+</script>
+
+<!-- 添加日期选择函数 -->
+<script>
+// 日期变更时获取可用时间
+function onDateChange(dateInput) {
+    console.log('日期已选择:', dateInput.value);
+    var date = dateInput.value;
+    var timeSelect = document.getElementById('appointmentTime');
+    
+    if (!date) {
+        timeSelect.innerHTML = '<option value="">请选择时间</option>';
+        return;
+    }
+    
+    // 显示加载中
+    timeSelect.innerHTML = '<option value="">加载中...</option>';
+    timeSelect.disabled = true;
+    
+    // 发送AJAX请求获取可用时间
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/available_times?date=' + date);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                console.log('获取到可用时间:', data);
+                
+                timeSelect.innerHTML = '<option value="">请选择时间</option>';
+                
+                if (data.available_times && data.available_times.length > 0) {
+                    data.available_times.forEach(function(time) {
+                        var option = document.createElement('option');
+                        option.value = time.value;
+                        option.textContent = time.label;
+                        timeSelect.appendChild(option);
+                    });
+                } else {
+                    timeSelect.innerHTML = '<option value="">当天没有可用时间</option>';
+                }
+            } catch (e) {
+                console.error('解析时间数据出错:', e);
+                timeSelect.innerHTML = '<option value="">获取时间失败</option>';
+            }
+        } else {
+            timeSelect.innerHTML = '<option value="">获取时间失败</option>';
+        }
+        
+        timeSelect.disabled = false;
+    };
+    xhr.onerror = function() {
+        timeSelect.innerHTML = '<option value="">网络错误</option>';
+        timeSelect.disabled = false;
+    };
+    xhr.send();
+}
+
+// 在预约模态框显示时初始化当前日期
+document.addEventListener('DOMContentLoaded', function() {
+    if ($('#createAppointmentModal').length) {
+        $('#createAppointmentModal').on('shown.bs.modal', function() {
+            console.log('预约模态框已显示');
+            var dateInput = document.getElementById('appointmentDate');
+            if (dateInput) {
+                // 设置默认日期为明天
+                var tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                dateInput.value = tomorrow.toISOString().split('T')[0];
+                // 手动触发日期变更事件
+                onDateChange(dateInput);
+            }
+        });
+    }
+    
+    // 绑定日期选择事件
+    var dateInput = document.getElementById('appointmentDate');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            onDateChange(this);
+        });
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}管理员统计报表 - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">管理员统计报表</h1>
+    
+    <!-- 日期筛选表单 -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">日期筛选</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label for="start_date">开始日期:</label>
+                            <input type="date" id="start_date" name="start_date" class="form-control ml-2" 
+                                   value="{{ start_date.isoformat() }}">
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label for="end_date">结束日期:</label>
+                            <input type="date" id="end_date" name="end_date" class="form-control ml-2" 
+                                   value="{{ end_date.isoformat() }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">查询</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 统计概览 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">新增客户</h5>
+                    <p class="card-text display-4">{{ new_clients|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">新增产品</h5>
+                    <p class="card-text display-4">{{ new_products|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">产品使用记录</h5>
+                    <p class="card-text display-4">{{ product_usages|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 选项卡导航 -->
+    <ul class="nav nav-tabs mb-3" id="statisticsTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="clients-tab" data-toggle="tab" href="#clients" role="tab">
+                新增客户统计
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="products-tab" data-toggle="tab" href="#products" role="tab">
+                新增产品统计
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="usages-tab" data-toggle="tab" href="#usages" role="tab">
+                产品使用统计
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="summary-tab" data-toggle="tab" href="#summary" role="tab">
+                归属统计
+            </a>
+        </li>
+    </ul>
+    
+    <!-- 选项卡内容 -->
+    <div class="tab-content" id="statisticsTabContent">
+        <!-- 新增客户统计 -->
+        <div class="tab-pane fade show active" id="clients" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">新增客户统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if new_clients %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>添加时间</th>
+                                    <th>姓名</th>
+                                    <th>性别</th>
+                                    <th>年龄</th>
+                                    <th>手机号</th>
+                                    <th>创建者</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client in new_clients %}
+                                <tr>
+                                    <td>{{ client.created_at }}</td>
+                                    <td>{{ client.name }}</td>
+                                    <td>{{ client.gender }}</td>
+                                    <td>{{ client.age }}</td>
+                                    <td>{{ client.phone }}</td>
+                                    <td>{{ client.creator_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">所选时间段内没有新增客户</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 新增产品统计 -->
+        <div class="tab-pane fade" id="products" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">新增产品统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if new_products %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>添加时间</th>
+                                    <th>产品名称</th>
+                                    <th>客户姓名</th>
+                                    <th>创建者</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in new_products %}
+                                <tr>
+                                    <td>{{ product.created_at }}</td>
+                                    <td>{{ product.product_name }}</td>
+                                    <td>{{ product.client_name }}</td>
+                                    <td>{{ product.creator_name }}</td>
+                                    <td>{{ product.notes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">所选时间段内没有新增产品</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 产品使用统计 -->
+        <div class="tab-pane fade" id="usages" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">产品使用统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_usages %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>使用日期</th>
+                                    <th>产品名称</th>
+                                    <th>客户姓名</th>
+                                    <th>使用次数</th>
+                                    <th>操作人员</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in product_usages %}
+                                <tr>
+                                    <td>{{ usage.usage_date }}</td>
+                                    <td>{{ usage.product_name }}</td>
+                                    <td>{{ usage.client_name }}</td>
+                                    <td>{{ usage.count_used }}</td>
+                                    <td>{{ usage.operator_name }}</td>
+                                    <td>{{ usage.notes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">所选时间段内没有产品使用记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- 归属统计 -->
+        <div class="tab-pane fade" id="summary" role="tabpanel">
+            <div class="row">
+                <!-- 按创建者统计新增客户 -->
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">按创建者统计新增客户</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if clients_by_creator %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>创建者</th>
+                                            <th>新增客户数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in clients_by_creator %}
+                                        <tr>
+                                            <td>{{ item.creator_name }}</td>
+                                            <td>{{ item.client_count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-center">所选时间段内没有数据</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 按创建者统计新增产品 -->
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">按创建者统计新增产品</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if products_by_creator %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>创建者</th>
+                                            <th>新增产品数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in products_by_creator %}
+                                        <tr>
+                                            <td>{{ item.creator_name }}</td>
+                                            <td>{{ item.product_count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-center">所选时间段内没有数据</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 按操作者统计产品使用 -->
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">按操作者统计产品使用</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if usages_by_operator %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>操作人员</th>
+                                            <th>使用记录数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in usages_by_operator %}
+                                        <tr>
+                                            <td>{{ item.operator_name }}</td>
+                                            <td>{{ item.usage_count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-center">所选时间段内没有数据</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}添加体重管理记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>添加体重管理记录</h2>
+    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 返回客户信息
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">客户: {{ client.name }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_weight_management', client_id=client.id) }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="record_date" class="form-label">记录日期</label>
+                    <input type="date" class="form-control" id="record_date" name="record_date" required>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="before_weight" class="form-label">前体重 (kg)</label>
+                    <input type="number" step="0.1" class="form-control" id="before_weight" name="before_weight" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="after_weight" class="form-label">后体重 (kg)</label>
+                    <input type="number" step="0.1" class="form-control" id="after_weight" name="after_weight" required>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="measurements" class="form-label">围度变化</label>
+                <textarea class="form-control" id="measurements" name="measurements" rows="3" placeholder="例如：腰围: 85cm -> 82cm, 臀围: 95cm -> 93cm"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">备注</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="reset" class="btn btn-outline-secondary me-md-2">重置</button>
+                <button type="submit" class="btn btn-primary">保存记录</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 自动设置今天日期
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('record_date').value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('record_date').value = `${yyyy}-${mm}-${dd}`;
+        }
+    });
+</script>
+{% endblock %} 

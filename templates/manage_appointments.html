@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+
+{% block title %}预约管理 - 禾燃客户管理系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .appointment-card {
+        margin-bottom: 1rem;
+    }
+    .nav-tabs .nav-link {
+        font-weight: 500;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: 700;
+    }
+    .status-badge {
+        font-size: 0.85rem;
+    }
+    .appointment-time {
+        font-weight: bold;
+    }
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+    }
+    .appointment-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .client-info {
+        margin-bottom: 0.5rem;
+    }
+    .date-filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+    }
+    .date-group {
+        display: flex;
+        align-items: center;
+    }
+    .date-group label {
+        margin-right: 0.5rem;
+        white-space: nowrap;
+    }
+    .search-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    /* 通知声音控制样式 */
+    .notification-control {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        background: rgba(255,255,255,0.9);
+        padding: 8px 15px;
+        border-radius: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .notification-control .badge {
+        margin-left: 8px;
+    }
+    .pulse {
+        animation: pulse-animation 2s infinite;
+    }
+    @keyframes pulse-animation {
+        0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    @media (max-width: 768px) {
+        .date-filters {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .date-group {
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>预约管理</h2>
+    
+    <!-- 添加音频通知元素 -->
+    <audio id="notificationSound" src="{{ url_for('static', filename='sounds/new_appointment_notification.mp3') }}" preload="auto"></audio>
+    
+    <!-- 通知控制按钮 -->
+    <div class="mb-3">
+        <button id="toggleNotification" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-bell"></i> <span id="notificationStatus">通知已开启</span>
+        </button>
+        <span id="newAppointmentBadge" class="badge bg-danger d-none">0</span>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            查找预约
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url_for('appointment.index') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>开始日期:</label>
+                            <input type="date" name="start_date" class="form-control" value="{{ request.args.get('start_date', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>结束日期:</label>
+                            <input type="date" name="end_date" class="form-control" value="{{ request.args.get('end_date', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>状态:</label>
+                            <select name="status" class="form-control">
+                                <option value="">全部</option>
+                                <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>待确认</option>
+                                <option value="confirmed" {% if request.args.get('status') == 'confirmed' %}selected{% endif %}>已确认</option>
+                                <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>已完成</option>
+                                <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>已取消</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary mb-2">搜索</button>
+                        <a href="{{ url_for('appointment.index') }}" class="btn btn-secondary mb-2 ml-2">重置</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            预约列表
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>客户</th>
+                            <th>日期</th>
+                            <th>时间</th>
+                            <th>服务</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appointmentTableBody">
+                        {% for appointment in appointments %}
+                        <tr>
+                            <td>{{ appointment.id }}</td>
+                            <td>{{ appointment.client_name }}</td>
+                            <td>{{ appointment.date }}</td>
+                            <td>{{ appointment.time }}</td>
+                            <td>{{ appointment.service_name }}</td>
+                            <td>
+                                {% if appointment.status == 'pending' %}
+                                <span class="badge bg-warning">待确认</span>
+                                {% elif appointment.status == 'confirmed' %}
+                                <span class="badge bg-info">已确认</span>
+                                {% elif appointment.status == 'completed' %}
+                                <span class="badge bg-success">已完成</span>
+                                {% elif appointment.status == 'cancelled' %}
+                                <span class="badge bg-danger">已取消</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ appointment.created_at }}</td>
+                            <td>
+                                <a href="{{ url_for('appointment.view_appointment', appointment_id=appointment.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                {% if appointment.status == 'pending' %}
+                                <button class="btn btn-sm btn-success confirm-appointment" data-id="{{ appointment.id }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if appointment.status == 'confirmed' %}
+                                <button class="btn btn-sm btn-success complete-appointment" data-id="{{ appointment.id }}">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if appointment.status in ['pending', 'confirmed'] %}
+                                <button class="btn btn-sm btn-danger cancel-appointment" data-id="{{ appointment.id }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 取消预约的模态框 -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">取消预约</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelForm">
+                    <div class="form-group">
+                        <label for="cancelReason">取消原因</label>
+                        <textarea class="form-control" id="cancelReason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-danger" id="confirmCancel">确认取消</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- 引入通知管理JS -->
+<script src="{{ url_for('static', filename='js/appointment_notifications.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let appointmentToCancel = null;
+        const csrfToken = '{{ csrf_token() }}';
+        
+        // 初始化通知管理器
+        const notificationManager = new AppointmentNotificationManager({
+            checkInterval: 30000, // 30秒检查一次
+            notificationSound: document.getElementById('notificationSound'),
+            badgeElement: document.getElementById('newAppointmentBadge'),
+            appointmentTableElement: document.getElementById('appointmentTableBody'),
+            apiBasePath: '/appointment-manager'
+        });
+
+        // 通知开关
+        document.getElementById('toggleNotification').addEventListener('click', function() {
+            const enabled = notificationManager.toggleNotification();
+            const statusElement = document.getElementById('notificationStatus');
+            statusElement.textContent = enabled ? '通知已开启' : '通知已关闭';
+        });
+
+        // 确认预约
+        document.querySelectorAll('.confirm-appointment').forEach(button => {
+            button.addEventListener('click', function() {
+                const appointmentId = this.getAttribute('data-id');
+                if (confirm('确认接受此预约请求?')) {
+                    notificationManager.confirmAppointment(appointmentId, csrfToken)
+                        .then(() => {
+                            window.location.reload();
+                        })
+                        .catch(() => {
+                            alert('确认预约失败，请重试');
+                        });
+                }
+            });
+        });
+
+        // 完成预约
+        document.querySelectorAll('.complete-appointment').forEach(button => {
+            button.addEventListener('click', function() {
+                const appointmentId = this.getAttribute('data-id');
+                if (confirm('确认此预约已完成?')) {
+                    notificationManager.completeAppointment(appointmentId, csrfToken)
+                        .then(() => {
+                            window.location.reload();
+                        })
+                        .catch(() => {
+                            alert('标记预约完成失败，请重试');
+                        });
+                }
+            });
+        });
+
+        // 取消预约
+        document.querySelectorAll('.cancel-appointment').forEach(button => {
+            button.addEventListener('click', function() {
+                appointmentToCancel = this.getAttribute('data-id');
+                const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+                modal.show();
+            });
+        });
+
+        // 确认取消
+        document.getElementById('confirmCancel').addEventListener('click', function() {
+            const reason = document.getElementById('cancelReason').value;
+            if (!reason.trim()) {
+                alert('请输入取消原因');
+                return;
+            }
+
+            notificationManager.cancelAppointment(appointmentToCancel, reason, csrfToken)
+                .then(() => {
+                    window.location.reload();
+                })
+                .catch(() => {
+                    alert('取消预约失败，请重试');
+                });
+        });
+        
+        // 页面加载时启动通知系统
+        notificationManager.startNotificationCheck();
+    });
+</script>
+{% endblock %} 

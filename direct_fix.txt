@@ -1,0 +1,34 @@
+===== 手动修复 admin_required 问题的步骤 =====
+
+请按照以下步骤手动修改 app_simple.py 文件：
+
+1. 用文本编辑器(如记事本、Notepad++等)打开 app_simple.py 文件
+
+2. 在文件的【最开头】添加以下代码：
+
+```python
+# 直接定义admin_required装饰器，避免导入问题
+import functools
+
+def admin_required(view):
+    """检查用户是否为管理员的装饰器"""
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for('login'))
+        if not g.user.get('role') == 'admin':
+            flash('需要管理员权限访问该页面', 'danger')
+            return redirect(url_for('dashboard'))
+        return view(**kwargs)
+    return wrapped_view
+```
+
+3. 保存文件
+
+4. 重新运行原始的启动脚本：
+   & i:/bettest/禾燃客户管理/.venv/Scripts/python.exe i:/bettest/禾燃客户管理/run_app.py
+
+注意事项：
+- 确保完全按照上述代码添加，不要漏掉任何行
+- 确保代码添加在文件的最开头，在所有import语句之前
+- 如果文件开头已经有import语句，请在导入语句之后、flask应用创建之前添加 
