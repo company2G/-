@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{% if operator %}编辑操作人员{% else %}添加操作人员{% endif %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-body">
+      <form method="post">
+        <div class="mb-3">
+          <label for="name" class="form-label">姓名</label>
+          <input type="text" class="form-control" id="name" name="name" value="{{ operator['name'] if operator else '' }}" required>
+        </div>
+        <div class="mb-3">
+          <label for="position" class="form-label">职位</label>
+          <input type="text" class="form-control" id="position" name="position" value="{{ operator['position'] if operator else '' }}">
+        </div>
+        <div class="d-flex justify-content-between">
+          <a href="{{ url_for('admin_operators') }}" class="btn btn-secondary">取消</a>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %} 

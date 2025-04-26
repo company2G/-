@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}添加新产品 - 禾燃客户管理系统{% endblock %}
+{% block title %}编辑产品 - {{ product.name }} - 禾燃客户管理系统{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,73 +8,73 @@
         <div class="col-lg-8">
             <div class="card shadow-sm my-4">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">添加新产品</h4>
+                    <h4 class="mb-0">编辑产品</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ url_for('add_product') }}">
+                    <form method="post" action="{{ url_for('edit_product', product_id=product.id) }}">
                         <div class="mb-3">
                             <label for="name" class="form-label">产品名称 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" required>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ product.name }}" required>
                         </div>
                         
                         <div class="mb-3">
                             <label for="description" class="form-label">产品描述 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="description" name="description" required>
+                            <input type="text" class="form-control" id="description" name="description" value="{{ product.description }}" required>
                             <small class="form-text text-muted">简要描述产品特点</small>
                         </div>
                         
                         <div class="mb-3">
                             <label for="price" class="form-label">价格 (¥) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" class="form-control" id="price" name="price" required>
+                            <input type="number" step="0.01" class="form-control" id="price" name="price" value="{{ product.price }}" required>
                         </div>
                         
                         <div class="mb-3">
                             <label for="type" class="form-label">产品类型 <span class="text-danger">*</span></label>
                             <select class="form-select" id="type" name="type" onchange="toggleFields()" required>
-                                <option value="count">次数卡</option>
-                                <option value="period">期限卡</option>
+                                <option value="count" {% if product.type == 'count' %}selected{% endif %}>次数卡</option>
+                                <option value="period" {% if product.type == 'period' %}selected{% endif %}>期限卡</option>
                             </select>
                         </div>
                         
                         <div class="mb-3">
                             <label for="category" class="form-label">产品分类 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="category" name="category" required>
+                            <input type="text" class="form-control" id="category" name="category" value="{{ product.category }}" required>
                             <small class="form-text text-muted">例如：热敷、塑形、疏通、体验卡等</small>
                         </div>
                         
                         <div class="mb-3">
                             <label for="details" class="form-label">产品详情</label>
-                            <textarea class="form-control" id="details" name="details" rows="3"></textarea>
+                            <textarea class="form-control" id="details" name="details" rows="3">{{ product.details }}</textarea>
                             <small class="form-text text-muted">请填写产品的适用部位、效果等详细描述</small>
                         </div>
                         
-                        <div id="countField" class="mb-3">
+                        <div id="countField" class="mb-3" {% if product.type != 'count' %}style="display: none;"{% endif %}>
                             <label for="default_count" class="form-label">默认次数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="default_count" name="default_count" value="1" min="1">
+                            <input type="number" class="form-control" id="default_count" name="default_count" value="{{ product.default_count }}" min="0">
                             <small class="form-text text-muted">客户购买该产品默认获得的次数</small>
                         </div>
                         
-                        <div id="periodField" class="mb-3" style="display: none;">
+                        <div id="periodField" class="mb-3" {% if product.type == 'count' %}style="display: none;"{% endif %}>
                             <label for="default_days" class="form-label">默认天数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="default_days" name="default_days" value="30" min="1">
+                            <input type="number" class="form-control" id="default_days" name="default_days" value="{{ product.default_days or 0 }}" min="0">
                             <small class="form-text text-muted">客户购买该产品默认有效的天数</small>
                         </div>
                         
-                        <div id="validityField" class="mb-3" style="display: none;">
+                        <div id="validityField" class="mb-3" {% if product.type == 'count' %}style="display: none;"{% endif %}>
                             <label for="validity_days" class="form-label">有效期 (天) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="validity_days" name="validity_days" value="30" min="1">
+                            <input type="number" class="form-control" id="validity_days" name="validity_days" value="{{ product.validity_days }}" min="0">
                             <small class="form-text text-muted">期限卡的有效天数，仅适用于期限卡</small>
                         </div>
                         
                         <div class="mb-3">
                             <label for="sessions" class="form-label">使用次数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="sessions" name="sessions" value="1" min="0">
+                            <input type="number" class="form-control" id="sessions" name="sessions" value="{{ product.sessions }}" min="0">
                             <small class="form-text text-muted">产品可使用的总次数，对期限卡也适用</small>
                         </div>
                         
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                             <a href="{{ url_for('products') }}" class="btn btn-secondary me-md-2">取消</a>
-                            <button type="submit" class="btn btn-primary">保存产品</button>
+                            <button type="submit" class="btn btn-primary">更新产品</button>
                         </div>
                     </form>
                 </div>
@@ -94,17 +94,14 @@ function toggleFields() {
         countField.style.display = 'block';
         periodField.style.display = 'none';
         validityField.style.display = 'none';
-        document.getElementById('default_days').value = '0';
-        document.getElementById('validity_days').value = '0';
     } else {
         countField.style.display = 'none';
         periodField.style.display = 'block';
         validityField.style.display = 'block';
-        document.getElementById('default_count').value = '0';
     }
 }
 
-// 页面加载完成后执行一次
+// 确保页面加载时调用一次
 document.addEventListener('DOMContentLoaded', toggleFields);
 </script>
 {% endblock %} 

@@ -1,94 +1,198 @@
 {% extends 'base.html' %}
 
-{% block title %}减脂记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+{% block title %}{{ client.name }} 的减脂记录{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>减脂记录</h2>
-    <div>
-        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary me-2">
-            <i class="bi bi-arrow-left"></i> 返回客户信息
-        </a>
-        <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> 添加记录
-        </a>
+<div class="container mt-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2>{{ client.name }} 的减脂记录</h2>
+            <div>
+                <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-arrow-left"></i> 返回客户信息
+                </a>
+                <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus"></i> 添加记录
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="client-info mb-4">
+                <p class="mb-0">年龄: {{ client.age }} | 性别: {{ '女' if client.gender == 'female' else '男' }}</p>
+            </div>
+
+            {% if records %}
+                <!-- 总体数据概览 -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">总体情况</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">体重变化</div>
+                                    <div class="card-body">
+                                        {% set first_record_item = records[-1] %}
+                                        {% set latest_record = records[0] %}
+                                        
+                                        <div class="row">
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">初始体重</p>
+                                                <h4>{{ first_record_item.morning_weight }} kg</h4>
+                                                <small class="text-muted">{{ first_record_item.record_date }}</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">当前体重</p>
+                                                <h4>{{ latest_record.morning_weight }} kg</h4>
+                                                <small class="text-muted">{{ latest_record.record_date }}</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">总体变化</p>
+                                                {% set total_change = latest_record.morning_weight|float - first_record_item.morning_weight|float %}
+                                                <h4 class="{{ 'text-success' if total_change < 0 else 'text-danger' if total_change > 0 else '' }}">
+                                                    {{ total_change|abs|round(1) }}
+                                                    {% if total_change < 0 %}↓{% elif total_change > 0 %}↑{% endif %} kg
+                                                </h4>
+                                                <small class="text-muted">{{ ((total_change / first_record_item.morning_weight|float) * 100)|abs|round(1) }}%</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">最近变化趋势</div>
+                                    <div class="card-body">
+                                        {% set recent_records = records[:7] %}
+                                        {% if recent_records|length > 1 %}
+                                            <div class="row mb-2">
+                                                <div class="col">
+                                                    <table class="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>日期</th>
+                                                                <th>体重</th>
+                                                                <th>日变化</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for record in recent_records %}
+                                                                <tr>
+                                                                    <td>{{ record.record_date }}</td>
+                                                                    <td>{{ record.morning_weight }} kg</td>
+                                                                    <td>
+                                                                        {% if loop.index < recent_records|length %}
+                                                                            {% set next_record = recent_records[loop.index] %}
+                                                                            {% set daily_change = record.morning_weight|float - next_record.morning_weight|float %}
+                                                                            <span class="{{ 'text-success' if daily_change < 0 else 'text-danger' if daily_change > 0 else '' }}">
+                                                                                {{ daily_change|abs|round(1) }}
+                                                                                {% if daily_change < 0 %}↓{% elif daily_change > 0 %}↑{% endif %}
+                                                                            </span>
+                                                                        {% else %}
+                                                                            <span class="text-muted">-</span>
+                                                                        {% endif %}
+                                                                    </td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="text-center text-muted my-3">
+                                                <p>需要更多记录来显示趋势</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细记录表格 -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>日期</th>
+                                <th>体重 (kg)</th>
+                                <th>餐食情况</th>
+                                <th>排便情况</th>
+                                <th>日变化</th>
+                                <th>总变化</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                                <tr>
+                                    <td>{{ record.record_date }}</td>
+                                    <td>{{ record.morning_weight }}</td>
+                                    <td>
+                                        {% if record.breakfast or record.lunch or record.dinner %}
+                                            {% set meal_status = '良好' if (record.breakfast == '正常' and record.lunch == '正常' and record.dinner == '正常') else '一般' if (record.breakfast or record.lunch or record.dinner) else '较差' %}
+                                            <span class="badge bg-{{ 'success' if meal_status == '良好' else 'warning' if meal_status == '一般' else 'danger' }}">
+                                                {{ meal_status }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.defecation %}
+                                            <span class="badge bg-{{ 'success' if record.defecation == '正常' else 'warning' if record.defecation == '不畅' else 'danger' if record.defecation == '便秘' else 'secondary' }}">
+                                                {{ record.defecation }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if loop.index < records|length %}
+                                            {% set next_record = records[loop.index] %}
+                                            {% set daily_change = record.morning_weight|float - next_record.morning_weight|float %}
+                                            <span class="{{ 'text-success' if daily_change < 0 else 'text-danger' if daily_change > 0 else '' }}">
+                                                {{ daily_change|abs|round(1) }}
+                                                {% if daily_change < 0 %}↓{% elif daily_change > 0 %}↑{% endif %} kg
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set first_record_item = records[-1] %}
+                                        {% set total_change = record.morning_weight|float - first_record_item.morning_weight|float %}
+                                        <span class="{{ 'text-success' if total_change < 0 else 'text-danger' if total_change > 0 else '' }}">
+                                            {{ total_change|abs|round(1) }}
+                                            {% if total_change < 0 %}↓{% elif total_change > 0 %}↑{% endif %} kg
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <p>该客户暂无减脂记录</p>
+                    <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus"></i> 添加第一条记录
+                    </a>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">客户: {{ client.name }}</h5>
-            <span class="badge bg-primary">初始体重: {{ client.weight }} kg</span>
-        </div>
-    </div>
-    <div class="card-body">
-        {% if records %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>日期</th>
-                        <th>早晨体重</th>
-                        <th>早餐</th>
-                        <th>中餐</th>
-                        <th>晚餐</th>
-                        <th>排便</th>
-                        <th>日变化</th>
-                        <th>总变化</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in records %}
-                    <tr>
-                        <td>{{ record.record_date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ record.morning_weight }} kg</td>
-                        <td>{{ record.breakfast|truncate(15) }}</td>
-                        <td>{{ record.lunch|truncate(15) }}</td>
-                        <td>{{ record.dinner|truncate(15) }}</td>
-                        <td>
-                            {% if record.defecation %}
-                            <i class="bi bi-check-circle-fill text-success"></i>
-                            {% else %}
-                            <i class="bi bi-x-circle-fill text-danger"></i>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if record.daily_change %}
-                                {% if record.daily_change > 0 %}
-                                <span class="text-danger">+{{ record.daily_change }} kg</span>
-                                {% else %}
-                                <span class="text-success">{{ record.daily_change }} kg</span>
-                                {% endif %}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if record.total_change %}
-                                {% if record.total_change > 0 %}
-                                <span class="text-danger">+{{ record.total_change }} kg</span>
-                                {% else %}
-                                <span class="text-success">{{ record.total_change }} kg</span>
-                                {% endif %}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-calendar-x" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="mt-3">暂无减脂记录</p>
-            <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-primary">
-                <i class="bi bi-calendar-plus"></i> 添加首条记录
-            </a>
-        </div>
-        {% endif %}
-    </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化所有工具提示
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
 {% endblock %} 

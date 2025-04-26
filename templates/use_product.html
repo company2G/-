@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}使用产品{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5>{{ client['name'] }} - {{ client_product['product_name'] }}</h5>
+    </div>
+    <div class="card-body">
+      <p>剩余次数: {{ client_product['remaining_count'] }}</p>
+      <p>到期日期: {{ client_product['expiry_date'] or '未设置' }}</p>
+      
+      <form method="post">
+        <div class="mb-3">
+          <label for="usage_amount" class="form-label">使用次数</label>
+          <input type="number" class="form-control" id="usage_amount" name="usage_amount" min="1" max="{{ client_product['remaining_count'] }}" required>
+        </div>
+        
+        <!-- 添加操作人员选择 -->
+        <div class="mb-3">
+          <label for="operator_id" class="form-label">操作人员</label>
+          <select class="form-control" id="operator_id" name="operator_id">
+            <option value="">-- 选择操作人员 --</option>
+            {% for operator in operators %}
+              <option value="{{ operator['id'] }}">{{ operator['name'] }}{% if operator['position'] %} ({{ operator['position'] }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label for="notes" class="form-label">备注</label>
+          <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+          <a href="{{ url_for('client_products', client_id=client['id']) }}" class="btn btn-secondary">返回</a>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="card">
+    <div class="card-header">
+      <h5>使用记录</h5>
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>使用次数</th>
+            <th>记录人</th>
+            <th>操作人员</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in usage_records %}
+            <tr>
+              <td>{{ record['usage_date'] }}</td>
+              <td>{{ record['amount_used'] }}</td>
+              <td>{{ record['username'] }}</td>
+              <td>{{ record['operator_name'] or '未指定' }}</td>
+              <td>{{ record['notes'] }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center">暂无使用记录</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %} 

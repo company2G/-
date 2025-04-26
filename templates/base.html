@@ -101,12 +101,12 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin_users') }}">
+                                <a class="nav-link" href="{{ url_for('admin_operators') }}">
                                     <i class="fas fa-users-cog"></i> 用户管理
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('products') }}">
+                                <a class="nav-link" href="/products">
                                     <i class="fas fa-box"></i> 产品管理
                                 </a>
                             </li>
@@ -115,6 +115,11 @@
                                     <i class="fas fa-chart-bar"></i> 统计报表
                                 </a>
                             </li>
+                            {% if g.user and g.user.role == 'admin' %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('admin_operators') }}">操作人员管理</a>
+                            </li>
+                            {% endif %}
                         {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('dashboard') }}">
@@ -162,10 +167,10 @@
                         <i class="bi bi-person-plus me-2"></i> 新增客户
                     </a>
                     {% if current_user.is_admin %}
-                    <a href="{{ url_for('admin_users') }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('admin_operators') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-people me-2"></i> 用户管理
                     </a>
-                    <a href="{{ url_for('products') }}" class="list-group-item list-group-item-action">
+                    <a href="/products" class="list-group-item list-group-item-action">
                         <i class="bi bi-box me-2"></i> 产品管理
                     </a>
                     <a href="{{ url_for('admin_manage_appointments') }}" class="list-group-item list-group-item-action">
@@ -210,9 +215,13 @@
             <span>新增客户</span>
         </a>
         {% if current_user.is_admin %}
-        <a href="{{ url_for('admin_users') }}">
+        <a href="{{ url_for('admin_operators') }}">
             <i class="bi bi-people"></i>
             <span>用户管理</span>
+        </a>
+        <a href="/products">
+            <i class="bi bi-box"></i>
+            <span>产品管理</span>
         </a>
         <a href="{{ url_for('admin_manage_appointments') }}">
             <i class="bi bi-calendar-check"></i>

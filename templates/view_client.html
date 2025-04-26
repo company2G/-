@@ -119,15 +119,15 @@
                         <a href="{{ url_for('add_weight_record', client_id=client.id) }}" class="btn btn-info">
                             <i class="fas fa-plus-circle"></i> 添加减脂记录
                         </a>
-                        <a href="{{ url_for('view_weight_records', client_id=client.id) }}" class="btn btn-outline-info">
+                        <a href="/client/{{ client.id }}/weight_records" class="btn btn-outline-info">
                             <i class="fas fa-calendar-week"></i> 查看所有减脂记录
                         </a>
                         <hr>
-                        <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-warning">
+                        <a href="/client/{{ client.id }}/weight_management/add" class="btn btn-outline-warning">
                             <i class="fas fa-plus-circle"></i> 添加体重管理记录
                         </a>
-                        <a href="{{ url_for('view_weight_managements', client_id=client.id) }}" class="btn btn-outline-warning">
-                            <i class="fas fa-graph-up"></i> 查看所有体重管理记录
+                        <a href="/client/{{ client.id }}/weight_managements" class="btn btn-warning">
+                            <i class="fas fa-clipboard-list"></i> 查看体重管理记录
                         </a>
                     </div>
                 </div>

@@ -1,79 +1,191 @@
 {% extends 'base.html' %}
 
-{% block title %}体重管理记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+{% block title %}{{ client.name }} 的体重管理记录{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>体重管理记录</h2>
-    <div>
-        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary me-2">
-            <i class="bi bi-arrow-left"></i> 返回客户信息
-        </a>
-        <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> 添加记录
-        </a>
+<div class="container mt-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2>{{ client.name }} 的体重管理记录</h2>
+            <div>
+                <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-arrow-left"></i> 返回客户信息
+                </a>
+                <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus"></i> 添加记录
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="client-info mb-4">
+                <p class="mb-0">年龄: {{ client.age }} | 性别: {{ '女' if client.gender == 'female' else '男' }}</p>
+            </div>
+
+            {% if weight_managements %}
+                <!-- 总体变化数据概览 -->
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">总体变化</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- 第一次记录与最新记录的体重对比 -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">体重变化</div>
+                                    <div class="card-body">
+                                        {% set first_record = weight_managements[-1] %}
+                                        {% set latest_record = weight_managements[0] %}
+                                        
+                                        <div class="row">
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">初始体重</p>
+                                                <h4>{{ first_record.before_weight }} kg</h4>
+                                                <small class="text-muted">{{ first_record.record_date }}</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">当前体重</p>
+                                                <h4>{{ latest_record.after_weight }} kg</h4>
+                                                <small class="text-muted">{{ latest_record.record_date }}</small>
+                                            </div>
+                                            <div class="col-4 text-center">
+                                                <p class="text-muted mb-0">总体变化</p>
+                                                {% set total_change = latest_record.after_weight|float - first_record.before_weight|float %}
+                                                <h4 class="{{ 'text-success' if total_change < 0 else 'text-danger' if total_change > 0 else '' }}">
+                                                    {{ total_change|abs|round(1) }}
+                                                    {% if total_change < 0 %}↓{% elif total_change > 0 %}↑{% endif %} kg
+                                                </h4>
+                                                <small class="text-muted">{{ ((total_change / first_record.before_weight|float) * 100)|abs|round(1) }}%</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 围度变化对比 -->
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">围度变化</div>
+                                    <div class="card-body">
+                                        {% set first_measurements = first_record.measurements.split(',') if first_record.measurements else [] %}
+                                        {% set latest_measurements = latest_record.measurements.split(',') if latest_record.measurements else [] %}
+
+                                        {% if first_measurements and latest_measurements and first_measurements|length == latest_measurements|length and first_measurements|length >= 3 %}
+                                            <div class="row text-center">
+                                                <div class="col-4">
+                                                    <p class="text-muted mb-0">腰围</p>
+                                                    {% set waist_change = latest_measurements[0]|float - first_measurements[0]|float %}
+                                                    <h5 class="{{ 'text-success' if waist_change < 0 else 'text-danger' if waist_change > 0 else '' }}">
+                                                        {{ waist_change|abs|round(1) }}
+                                                        {% if waist_change < 0 %}↓{% elif waist_change > 0 %}↑{% endif %} cm
+                                                    </h5>
+                                                </div>
+                                                <div class="col-4">
+                                                    <p class="text-muted mb-0">臀围</p>
+                                                    {% set hip_change = latest_measurements[1]|float - first_measurements[1]|float %}
+                                                    <h5 class="{{ 'text-success' if hip_change < 0 else 'text-danger' if hip_change > 0 else '' }}">
+                                                        {{ hip_change|abs|round(1) }}
+                                                        {% if hip_change < 0 %}↓{% elif hip_change > 0 %}↑{% endif %} cm
+                                                    </h5>
+                                                </div>
+                                                <div class="col-4">
+                                                    <p class="text-muted mb-0">大腿围</p>
+                                                    {% set thigh_change = latest_measurements[2]|float - first_measurements[2]|float %}
+                                                    <h5 class="{{ 'text-success' if thigh_change < 0 else 'text-danger' if thigh_change > 0 else '' }}">
+                                                        {{ thigh_change|abs|round(1) }}
+                                                        {% if thigh_change < 0 %}↓{% elif thigh_change > 0 %}↑{% endif %} cm
+                                                    </h5>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="text-center text-muted my-3">
+                                                <p>围度数据不完整，无法比较</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 详细记录表格 -->
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>记录日期</th>
+                                <th>开始体重</th>
+                                <th>当前体重</th>
+                                <th>体重变化</th>
+                                <th>围度测量</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in weight_managements %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ record.record_date }}</td>
+                                    <td>{{ record.before_weight }} kg</td>
+                                    <td>{{ record.after_weight }} kg</td>
+                                    <td>
+                                        {% set weight_diff = record.after_weight|float - record.before_weight|float %}
+                                        <span class="{{ 'text-success' if weight_diff < 0 else 'text-danger' if weight_diff > 0 else '' }}">
+                                            {{ weight_diff|abs|round(1) }}
+                                            {% if weight_diff < 0 %}↓{% elif weight_diff > 0 %}↑{% endif %} kg
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if record.measurements %}
+                                            {% set measurements = record.measurements.split(',') %}
+                                            {% if measurements|length >= 3 %}
+                                                <div class="small">
+                                                    <span class="me-2">腰围: {{ measurements[0] }} cm</span>
+                                                    <span class="me-2">臀围: {{ measurements[1] }} cm</span>
+                                                    <span>大腿围: {{ measurements[2] }} cm</span>
+                                                </div>
+                                            {% else %}
+                                                {{ record.measurements }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.notes %}
+                                            <span class="text-truncate d-inline-block" style="max-width: 250px;" data-bs-toggle="tooltip" title="{{ record.notes }}">
+                                                {{ record.notes }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info text-center">
+                    <p>该客户暂无体重管理记录</p>
+                    <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus"></i> 添加第一条记录
+                    </a>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header bg-light">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">客户: {{ client.name }}</h5>
-            <span class="badge bg-primary">初始体重: {{ client.weight }} kg</span>
-        </div>
-    </div>
-    <div class="card-body">
-        {% if managements %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>序号</th>
-                        <th>日期</th>
-                        <th>前体重</th>
-                        <th>后体重</th>
-                        <th>减重</th>
-                        <th>围度变化</th>
-                        <th>备注</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for management in managements %}
-                    <tr>
-                        <td>{{ management.sequence }}</td>
-                        <td>{{ management.record_date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ management.before_weight }} kg</td>
-                        <td>{{ management.after_weight }} kg</td>
-                        <td>
-                            {% if management.before_weight and management.after_weight %}
-                                {% set weight_change = management.before_weight - management.after_weight %}
-                                {% if weight_change > 0 %}
-                                <span class="text-success">-{{ weight_change }} kg</span>
-                                {% elif weight_change < 0 %}
-                                <span class="text-danger">+{{ -weight_change }} kg</span>
-                                {% else %}
-                                <span>0 kg</span>
-                                {% endif %}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                        <td>{{ management.measurements|truncate(20) }}</td>
-                        <td>{{ management.notes|truncate(20) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-clipboard-x" style="font-size: 3rem; color: #ccc;"></i>
-            <p class="mt-3">暂无体重管理记录</p>
-            <a href="{{ url_for('add_weight_management', client_id=client.id) }}" class="btn btn-primary">
-                <i class="bi bi-clipboard-plus"></i> 添加首条记录
-            </a>
-        </div>
-        {% endif %}
-    </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化所有工具提示
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+</script>
 {% endblock %} 

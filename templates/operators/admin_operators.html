@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}操作人员管理{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col">
+        <a href="{{ url_for('add_operator') }}" class="btn btn-primary">添加操作人员</a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">操作人员列表</h5>
+      </div>
+      <div class="card-body">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>姓名</th>
+              <th>职位</th>
+              <th>系统用户</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for operator in operators %}
+              <tr>
+                <td>{{ operator['id'] }}</td>
+                <td>{{ operator['name'] }}</td>
+                <td>{{ operator['position'] }}</td>
+                <td>
+                  {% if operator['username'] %}
+                    {{ operator['username'] }}
+                    <span class="badge bg-{{ 'danger' if operator['role'] == 'admin' else 'info' }}">
+                      {{ operator['role'] }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">未关联用户</span>
+                  {% endif %}
+                </td>
+                <td>{{ operator['created_at'] }}</td>
+                <td>
+                  <a href="{{ url_for('edit_operator', operator_id=operator['id']) }}" class="btn btn-sm btn-outline-primary">编辑</a>
+                  <form action="{{ url_for('delete_operator', operator_id=operator['id']) }}" method="post" class="d-inline" onsubmit="return confirm('确定删除此操作人员吗？');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="6" class="text-center">暂无操作人员</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

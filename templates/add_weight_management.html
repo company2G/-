@@ -1,69 +1,147 @@
 {% extends 'base.html' %}
 
-{% block title %}添加体重管理记录 - {{ client.name }} - 禾燃客户管理系统{% endblock %}
+{% block title %}添加体重管理记录 - {{ client.name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>添加体重管理记录</h2>
-    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> 返回客户信息
-    </a>
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2>添加体重管理记录</h2>
+            <p class="mb-0">客户: {{ client.name }} | 
+                年龄: {{ client.age }} | 
+                性别: {{ '女' if client.gender == 'female' else '男' }}
+            </p>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="record_date" class="form-label">记录日期 <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="record_date" name="record_date" value="{{ today }}" required>
+                        <div class="invalid-feedback">请选择记录日期</div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="before_weight" class="form-label">开始体重 (kg) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="before_weight" name="before_weight" step="0.1" required>
+                        <div class="invalid-feedback">请输入开始体重</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="after_weight" class="form-label">当前体重 (kg) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="after_weight" name="after_weight" step="0.1" required>
+                        <div class="invalid-feedback">请输入当前体重</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">体重变化</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="weight_diff" readonly>
+                            <span class="input-group-text" id="weight_diff_direction"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="measurements" class="form-label">围度测量 (cm)</label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">腰围</span>
+                            <input type="number" class="form-control measurement-input" id="waist" step="0.1">
+                            <span class="input-group-text">cm</span>
+                        </div>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">臀围</span>
+                            <input type="number" class="form-control measurement-input" id="hip" step="0.1">
+                            <span class="input-group-text">cm</span>
+                        </div>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text">大腿围</span>
+                            <input type="number" class="form-control measurement-input" id="thigh" step="0.1">
+                            <span class="input-group-text">cm</span>
+                        </div>
+                        <input type="hidden" id="measurements" name="measurements">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="notes" class="form-label">备注</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="5"></textarea>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('view_weight_managements', client_id=client.id) }}" class="btn btn-outline-secondary">
+                        返回体重管理记录
+                    </a>
+                    <button type="submit" class="btn btn-primary">保存记录</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0">客户: {{ client.name }}</h5>
-    </div>
-    <div class="card-body">
-        <form method="POST" action="{{ url_for('add_weight_management', client_id=client.id) }}">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="record_date" class="form-label">记录日期</label>
-                    <input type="date" class="form-control" id="record_date" name="record_date" required>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="before_weight" class="form-label">前体重 (kg)</label>
-                    <input type="number" step="0.1" class="form-control" id="before_weight" name="before_weight" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label for="after_weight" class="form-label">后体重 (kg)</label>
-                    <input type="number" step="0.1" class="form-control" id="after_weight" name="after_weight" required>
-                </div>
-            </div>
-            
-            <div class="mb-3">
-                <label for="measurements" class="form-label">围度变化</label>
-                <textarea class="form-control" id="measurements" name="measurements" rows="3" placeholder="例如：腰围: 85cm -> 82cm, 臀围: 95cm -> 93cm"></textarea>
-            </div>
-            
-            <div class="mb-3">
-                <label for="notes" class="form-label">备注</label>
-                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
-            </div>
-            
-            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                <button type="reset" class="btn btn-outline-secondary me-md-2">重置</button>
-                <button type="submit" class="btn btn-primary">保存记录</button>
-            </div>
-        </form>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
-    // 自动设置今天日期
-    document.addEventListener('DOMContentLoaded', function() {
-        if (!document.getElementById('record_date').value) {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('record_date').value = `${yyyy}-${mm}-${dd}`;
+document.addEventListener('DOMContentLoaded', function() {
+    // 计算体重差异
+    function calculateWeightDiff() {
+        const beforeWeight = parseFloat(document.getElementById('before_weight').value) || 0;
+        const afterWeight = parseFloat(document.getElementById('after_weight').value) || 0;
+        const diffField = document.getElementById('weight_diff');
+        const directionField = document.getElementById('weight_diff_direction');
+        
+        if (beforeWeight && afterWeight) {
+            const diff = afterWeight - beforeWeight;
+            diffField.value = Math.abs(diff).toFixed(1);
+            
+            if (diff < 0) {
+                directionField.textContent = '↓ kg';
+                directionField.className = 'input-group-text bg-success text-white';
+            } else if (diff > 0) {
+                directionField.textContent = '↑ kg';
+                directionField.className = 'input-group-text bg-danger text-white';
+            } else {
+                directionField.textContent = 'kg';
+                directionField.className = 'input-group-text';
+            }
+        } else {
+            diffField.value = '';
+            directionField.textContent = 'kg';
+            directionField.className = 'input-group-text';
         }
+    }
+    
+    // 合并围度测量数据
+    function combineMeasurements() {
+        const waist = document.getElementById('waist').value;
+        const hip = document.getElementById('hip').value;
+        const thigh = document.getElementById('thigh').value;
+        
+        let measurements = [];
+        if (waist) measurements.push(waist);
+        if (hip) measurements.push(hip);
+        if (thigh) measurements.push(thigh);
+        
+        document.getElementById('measurements').value = measurements.join(',');
+    }
+    
+    // 表单提交前合并围度数据
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        combineMeasurements();
+        
+        // 表单验证
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            this.classList.add('was-validated');
+            return;
+        }
+        
+        this.submit();
     });
+    
+    // 监听体重输入变化
+    document.getElementById('before_weight').addEventListener('input', calculateWeightDiff);
+    document.getElementById('after_weight').addEventListener('input', calculateWeightDiff);
+});
 </script>
 {% endblock %} 

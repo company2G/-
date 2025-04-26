@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}管理员统计报表 - 禾燃客户管理系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">系统统计</h1>
+    
+    <!-- 日期筛选器 -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">日期筛选</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url_for('admin_statistics') }}" class="row g-3">
+                <div class="col-md-4">
+                    <label for="start_date" class="form-label">开始日期</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="end_date" class="form-label">结束日期</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">应用筛选</button>
+                    <a href="{{ url_for('admin_statistics') }}" class="btn btn-outline-secondary">清除筛选</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 统计概览 -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">客户总数</h5>
+                    <p class="card-text display-4">{{ client_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">产品总数</h5>
+                    <p class="card-text display-4">{{ product_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">使用记录总数</h5>
+                    <p class="card-text display-4">{{ usage_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 产品销售统计 -->
+    <div class="row">
+        <!-- 按产品分组的销售统计 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">产品销售统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_sales_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>销售数量</th>
+                                    <th>销售金额</th>
+                                    <th>总疗程数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in product_sales_stats %}
+                                <tr>
+                                    <td>{{ stat.product_name }}</td>
+                                    <td>{{ stat.sales_count }}</td>
+                                    <td>¥{{ "%.2f"|format(stat.total_sales_amount or 0) }}</td>
+                                    <td>{{ stat.total_sessions_sold or 0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无产品销售数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 按销售人员分组的销售统计 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">销售人员业绩统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_seller_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>用户名</th>
+                                    <th>销售数量</th>
+                                    <th>销售金额</th>
+                                    <th>产品种类</th>
+                                    <th>客户数量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in product_seller_stats %}
+                                <tr>
+                                    <td>{{ stat.username }}</td>
+                                    <td>{{ stat.sales_count }}</td>
+                                    <td>¥{{ "%.2f"|format(stat.total_sales_amount or 0) }}</td>
+                                    <td>{{ stat.product_types }}</td>
+                                    <td>{{ stat.client_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无销售人员业绩数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 产品创建记录（销售记录） -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">最近产品销售记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_sales %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>客户名称</th>
+                                    <th>产品名称</th>
+                                    <th>价格</th>
+                                    <th>购买日期</th>
+                                    <th>开始日期</th>
+                                    <th>总疗程数</th>
+                                    <th>剩余疗程</th>
+                                    <th>创建人</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sale in product_sales %}
+                                <tr>
+                                    <td>{{ sale.id }}</td>
+                                    <td>{{ sale.client_name }}</td>
+                                    <td>{{ sale.product_name }}</td>
+                                    <td>¥{{ "%.2f"|format(sale.price) }}</td>
+                                    <td>{{ sale.purchase_date }}</td>
+                                    <td>{{ sale.start_date }}</td>
+                                    <td>{{ sale.total_sessions }}</td>
+                                    <td>{{ sale.remaining_sessions }}</td>
+                                    <td>{{ sale.created_by }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无产品销售记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 产品使用统计 -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">产品使用统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>使用次数</th>
+                                    <th>总使用量</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in product_usage %}
+                                <tr>
+                                    <td>{{ usage.name }}</td>
+                                    <td>{{ usage.usage_count }}</td>
+                                    <td>{{ usage.total_used }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无产品使用数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作人员使用统计 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">操作人员使用统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if operator_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>操作人员</th>
+                                    <th>职位</th>
+                                    <th>使用次数</th>
+                                    <th>总使用量</th>
+                                    <th>客户数量</th>
+                                    <th>产品种类</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for op in operator_usage %}
+                                <tr>
+                                    <td>{{ op.operator_name }}</td>
+                                    <td>{{ op.position }}</td>
+                                    <td>{{ op.usage_count }}</td>
+                                    <td>{{ op.total_used }}</td>
+                                    <td>{{ op.client_count }}</td>
+                                    <td>{{ op.product_type_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无操作人员使用数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增：产品和操作人员交叉统计 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-purple text-white" style="background-color: #6f42c1;">
+                    <h5 class="mb-0">产品与操作人员使用关系统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if cross_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>操作人员</th>
+                                    <th>产品名称</th>
+                                    <th>使用次数</th>
+                                    <th>总使用量</th>
+                                    <th>服务客户数</th>
+                                    <th>最近使用日期</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set current_operator = '' %}
+                                {% for usage in cross_usage %}
+                                    {% if usage.operator_name != current_operator %}
+                                        {% set current_operator = usage.operator_name %}
+                                        <tr class="table-secondary">
+                                            <td colspan="6"><strong>{{ usage.operator_name }}</strong></td>
+                                        </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td></td>
+                                        <td>{{ usage.product_name }}</td>
+                                        <td>{{ usage.usage_count }}</td>
+                                        <td>{{ usage.total_used }}</td>
+                                        <td>{{ usage.client_count }}</td>
+                                        <td>{{ usage.last_usage_date }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无产品与操作人员使用数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增：按产品分组的操作人员使用情况 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-teal text-white" style="background-color: #20c997;">
+                    <h5 class="mb-0">产品使用明细（按产品分组）</h5>
+                </div>
+                <div class="card-body">
+                    {% if product_operator %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>产品名称</th>
+                                    <th>操作人员</th>
+                                    <th>使用次数</th>
+                                    <th>总使用量</th>
+                                    <th>服务客户数</th>
+                                    <th>最近使用日期</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set current_product = '' %}
+                                {% for usage in product_operator %}
+                                    {% if usage.product_name != current_product %}
+                                        {% set current_product = usage.product_name %}
+                                        <tr class="table-info">
+                                            <td colspan="6"><strong>{{ usage.product_name }}</strong></td>
+                                        </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td></td>
+                                        <td>{{ usage.operator_name }}</td>
+                                        <td>{{ usage.usage_count }}</td>
+                                        <td>{{ usage.total_used }}</td>
+                                        <td>{{ usage.client_count }}</td>
+                                        <td>{{ usage.last_usage_date }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无按产品分组的操作人员使用数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增：整合产品销售记录和操作人员信息 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">产品使用明细记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if detailed_usage %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>记录ID</th>
+                                    <th>客户名称</th>
+                                    <th>产品名称</th>
+                                    <th>价格(¥)</th>
+                                    <th>购买日期</th>
+                                    <th>操作人员</th>
+                                    <th>操作人职位</th>
+                                    <th>使用次数</th>
+                                    <th>使用量</th>
+                                    <th>上次使用日期</th>
+                                    <th>创建人</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in detailed_usage %}
+                                <tr>
+                                    <td>{{ record.record_id }}</td>
+                                    <td>{{ record.client_name }}</td>
+                                    <td>{{ record.product_name }}</td>
+                                    <td>{{ "%.2f"|format(record.price or 0) }}</td>
+                                    <td>{{ record.purchase_date }}</td>
+                                    <td>{{ record.operator_name or '-' }}</td>
+                                    <td>{{ record.operator_position or '-' }}</td>
+                                    <td>{{ record.usage_times or 0 }}</td>
+                                    <td>{{ record.amount_used or 0 }}</td>
+                                    <td>{{ record.last_usage_date or '-' }}</td>
+                                    <td>{{ record.created_by or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无产品使用明细记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 最近客户列表 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">最近添加的客户</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_clients %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>性别</th>
+                                    <th>年龄</th>
+                                    <th>电话</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client in recent_clients %}
+                                <tr>
+                                    <td>{{ client.name }}</td>
+                                    <td>{{ '女' if client.gender == 'female' else '男' }}</td>
+                                    <td>{{ client.age }}</td>
+                                    <td>{{ client.phone }}</td>
+                                    <td>
+                                        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无客户</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 客户创建者统计 -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">客户创建者统计</h5>
+                </div>
+                <div class="card-body">
+                    {% if creator_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>用户</th>
+                                    <th>创建客户数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in creator_stats %}
+                                <tr>
+                                    <td>{{ stat.username }}</td>
+                                    <td>{{ stat.client_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无数据</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近产品使用记录 -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">最近产品使用记录</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_usages %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>使用日期</th>
+                                    <th>客户</th>
+                                    <th>产品</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usage in recent_usages %}
+                                <tr>
+                                    <td>{{ usage.id }}</td>
+                                    <td>{{ usage.usage_date }}</td>
+                                    <td>
+                                        <a href="{{ url_for('view_client', client_id=usage.client_id) }}">
+                                            {{ usage.client_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ usage.product_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center">暂无使用记录</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 初始化日期选择器
+    document.addEventListener('DOMContentLoaded', function() {
+        // 日期提交时检查逻辑
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            
+            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+                e.preventDefault();
+                alert('开始日期不能晚于结束日期');
+            }
+        });
+    });
+</script>
+{% endblock %} 

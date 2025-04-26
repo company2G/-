@@ -1,22 +1,20 @@
-import os
+from flask import Flask, render_template, request, redirect, url_for, flash, g, session, jsonify, abort
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
+from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
 import functools
-import pandas as pd
-from flask import Flask, render_template, request, url_for, flash, redirect, session, g, jsonify, abort
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash, generate_password_hash
+import datetime
+import time
+import os
+from functools import wraps
+# 移除重复的datetime导入
 from datetime import datetime, date, timedelta
-import json
-import uuid
 
+# 创建Flask应用
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # 替换为复杂的随机密钥
-app.config['DATABASE'] = os.path.join(app.root_path, 'database.db')  # 修正为正确的数据库路径
+app.config['SECRET_KEY'] = 'development_key'  # 生产环境中应使用强密钥
 
-# 确保实例文件夹存在
-os.makedirs(app.instance_path, exist_ok=True)
-
-# 初始化登录管理器
+# 初始化LoginManager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -50,11 +48,15 @@ def admin_required(view):
 def get_db():
     """获取数据库连接"""
     if 'db' not in g:
-        g.db = sqlite3.connect(
-            app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.db.row_factory = sqlite3.Row
+        try:
+            g.db = sqlite3.connect(
+                os.path.join(os.path.dirname(__file__), 'database.db'),
+                detect_types=sqlite3.PARSE_DECLTYPES
+            )
+            g.db.row_factory = sqlite3.Row
+        except sqlite3.Error as e:
+            app.logger.error(f"数据库连接错误: {str(e)}")
+            raise Exception(f"数据库连接错误: {str(e)}")
     return g.db
 
 @app.teardown_appcontext
@@ -68,116 +70,66 @@ def close_db(e=None):
             app.logger.error(f"关闭数据库连接时出错: {str(e)}")
 
 def init_db():
-    """初始化数据库，创建所有需要的表格"""
+    """初始化数据库表结构"""
     db = get_db()
-    db.executescript('''
-    CREATE TABLE IF NOT EXISTS user (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        client_id INTEGER DEFAULT NULL,
-        FOREIGN KEY (client_id) REFERENCES client (id)
-    );
     
-    CREATE TABLE IF NOT EXISTS client (
+    try:
+        # 读取schema.sql文件
+        with open(os.path.join(os.path.dirname(__file__), 'schema.sql'), 'r', encoding='utf-8') as f:
+            db.executescript(f.read())
+            
+        # 检查是否创建了管理员账户
+        admin = db.execute('SELECT * FROM user WHERE username = "admin"').fetchone()
+        if not admin:
+            # 创建默认管理员账户
+            password_hash = generate_password_hash('admin')
+            db.execute(
+                'INSERT INTO user (username, password_hash, role) VALUES (?, ?, ?)',
+                ('admin', password_hash, 'admin')
+            )
+            db.commit()
+            print('已创建默认管理员账户 (用户名: admin, 密码: admin)')
+            
+        # 确保user表包含所有必要的列
+        needed_columns = {
+            'client_id': 'INTEGER', 
+            'name': 'TEXT', 
+            'phone': 'TEXT', 
+            'email': 'TEXT'
+        }
+        
+        for col_name, col_type in needed_columns.items():
+            try:
+                # 检查列是否存在
+                result = db.execute(f"PRAGMA table_info(user)").fetchall()
+                column_exists = any(col['name'] == col_name for col in result)
+                
+                if not column_exists:
+                    db.execute(f'ALTER TABLE user ADD COLUMN {col_name} {col_type}')
+                    print(f"已在user表中添加{col_name}列")
+            except Exception as e:
+                print(f"添加列 {col_name} 到user表时出错: {str(e)}")
+        
+        db.commit()
+    except Exception as e:
+        print(f"初始化数据库时出错: {str(e)}")
+    
+    # 检查并创建operators表
+    db.execute('''
+    CREATE TABLE IF NOT EXISTS operators (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        gender TEXT,
-        age INTEGER,
-        phone TEXT UNIQUE NOT NULL,
-        address TEXT,
-        workplace TEXT,
-        breakfast TEXT,
-        lunch TEXT,
-        dinner TEXT,
-        night_snack TEXT,
-        cold_food TEXT,
-        sweet_food TEXT,
-        meat TEXT,
-        alcohol TEXT,
-        constitution TEXT,
-        water_drinking TEXT,
-        sleep TEXT,
-        defecation TEXT,
-        gynecology TEXT,
-        weight REAL,
-        height REAL,
-        standard_weight REAL,
-        overweight REAL,
-        waist REAL,
-        hip REAL,
-        leg REAL,
-        user_id INTEGER,
-        FOREIGN KEY (user_id) REFERENCES user (id)
-    );
-    
-    CREATE TABLE IF NOT EXISTS weight_record (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        record_date DATE NOT NULL,
-        weight REAL NOT NULL,
-        waist REAL,
-        hip REAL,
-        leg REAL,
-        notes TEXT,
-        FOREIGN KEY (client_id) REFERENCES client (id)
-    );
-    
-    CREATE TABLE IF NOT EXISTS weight_management (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        record_date DATE NOT NULL,
-        management_type TEXT NOT NULL,
-        notes TEXT,
-        FOREIGN KEY (client_id) REFERENCES client (id)
-    );
-    
-    -- 添加全局产品表
-    CREATE TABLE IF NOT EXISTS product (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        price REAL NOT NULL,
-        type TEXT NOT NULL,  -- 'count' 或 'period'
-        category TEXT,
-        details TEXT,
-        count INTEGER DEFAULT 0,  -- 次数卡的使用次数
-        validity_days INTEGER DEFAULT 0  -- 期限卡的有效天数
-    );
-    
-    CREATE TABLE IF NOT EXISTS client_product (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        purchase_date DATE NOT NULL,
-        start_date DATE,
-        remaining_count INTEGER,
-        expiry_date DATE,
-        notes TEXT,
-        FOREIGN KEY (client_id) REFERENCES clients (id),
-        FOREIGN KEY (product_id) REFERENCES products (id)
-    );
-    
-    CREATE TABLE IF NOT EXISTS product_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_product_id INTEGER NOT NULL,
-        usage_date DATE NOT NULL,
-        notes TEXT,
-        FOREIGN KEY (client_product_id) REFERENCES client_products (id)
-    );
-    
-    CREATE TABLE IF NOT EXISTS appointments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        appointment_date DATE NOT NULL,
-        appointment_time TIME NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        notes TEXT,
-        confirmed INTEGER NOT NULL DEFAULT 0,
+        position TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES clients (id)
-    );
+        created_by INTEGER,
+        FOREIGN KEY (created_by) REFERENCES user (id)
+    )
     ''')
+    
+    # 检查client_product_usage表是否有operator_id列
+    if not column_exists('client_product_usage', 'operator_id'):
+        db.execute('ALTER TABLE client_product_usage ADD COLUMN operator_id INTEGER')
+    
     db.commit()
 
 # 辅助函数：将SQLite Row对象转换为字典
@@ -780,14 +732,9 @@ def use_client_product(client_id, client_product_id):
     operators = db.execute('SELECT * FROM operators ORDER BY name').fetchall()
     
     if request.method == 'POST':
-        # 从表单获取数据，支持两个可能的字段名
-        usage_amount = request.form.get('count_used', type=int)
-        if not usage_amount:
-            usage_amount = request.form.get('usage_amount', type=int)
-            
+        usage_amount = request.form.get('usage_amount', type=int)
         notes = request.form.get('notes', '')
         operator_id = request.form.get('operator_id', type=int)
-        usage_date = request.form.get('usage_date', datetime.now().strftime('%Y-%m-%d'))
         
         error = None
         if not usage_amount or usage_amount <= 0:
@@ -804,30 +751,11 @@ def use_client_product(client_id, client_product_id):
                 (new_remaining, client_product_id)
             )
             
-            # 先检查product_usage表是否有count_used字段
-            cursor = db.cursor()
-            table_info = cursor.execute("PRAGMA table_info(product_usage)").fetchall()
-            has_count_used = any(col['name'] == 'count_used' for col in table_info)
-            
-            # 记录使用情况到product_usage表
-            if has_count_used:
-                db.execute(
-                    'INSERT INTO product_usage (client_product_id, usage_date, count_used, notes, operator_id, created_at) '
-                    'VALUES (?, ?, ?, ?, ?, ?)',
-                    (client_product_id, usage_date, usage_amount, notes, operator_id, datetime.now().isoformat())
-                )
-            else:
-                db.execute(
-                    'INSERT INTO product_usage (client_product_id, usage_date, notes, operator_id, created_at) '
-                    'VALUES (?, ?, ?, ?, ?)',
-                    (client_product_id, usage_date, notes, operator_id, datetime.now().isoformat())
-                )
-            
-            # 同时记录到client_product_usage表
+            # 记录使用情况，添加operator_id
             db.execute(
-                'INSERT INTO client_product_usage (client_product_id, amount_used, usage_date, notes, user_id, operator_id) '
-                'VALUES (?, ?, ?, ?, ?, ?)',
-                (client_product_id, usage_amount, datetime.now().isoformat(), notes, (g.user.id if hasattr(g, 'user') and g.user is not None else 1), operator_id)
+                'INSERT INTO client_product_usage (client_product_id, amount_used, notes, user_id, operator_id) '
+                'VALUES (?, ?, ?, ?, ?)',
+                (client_product_id, usage_amount, notes, g.user.id, operator_id)
             )
             
             db.commit()
@@ -836,7 +764,7 @@ def use_client_product(client_id, client_product_id):
             
         flash(error)
     
-    # 获取此产品的使用记录，先尝试从client_product_usage获取
+    # 修改这里，使用LEFT JOIN避免找不到操作人员的情况
     try:
         usage_records = db.execute(
             'SELECT cpu.*, u.username, o.name as operator_name FROM client_product_usage cpu '
@@ -846,107 +774,106 @@ def use_client_product(client_id, client_product_id):
             'ORDER BY cpu.usage_date DESC',
             (client_product_id,)
         ).fetchall()
-        
-        # 如果没有记录，从product_usage表获取
-        if not usage_records:
-            usage_records = db.execute(
-                'SELECT pu.*, u.username, o.name as operator_name FROM product_usage pu '
-                'LEFT JOIN user u ON pu.operator_id = u.id '
-                'LEFT JOIN operators o ON pu.operator_id = o.id '
-                'WHERE pu.client_product_id = ? '
-                'ORDER BY pu.usage_date DESC',
-                (client_product_id,)
-            ).fetchall()
-    except Exception as e:
-        app.logger.error(f"获取使用记录时出错: {str(e)}")
+    except:
+        # 如果查询失败，设置为空列表
         usage_records = []
-    
-    # 转换为字典便于模板访问
-    usage_records = [dict_from_row(record) for record in usage_records]
-    
-    # 设置今天的日期，用于表单默认值
-    today = datetime.now().strftime('%Y-%m-%d')
     
     return render_template(
         'use_product.html', 
         client=client, 
-        client_product=client_product,  # 改回原来的名称
+        client_product=client_product, 
         usage_records=usage_records,
-        operators=operators,
-        today=today
+        operators=operators
     )
 
 @app.route('/client/<int:client_id>/products')
 @login_required
 def client_products(client_id):
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    """显示客户的产品列表(分页)"""
+    # 权限检查 - 使用统一函数
+    if not user_can_manage_client(client_id):
+        flash('您无权查看此客户的产品信息', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # 每页显示10条记录
+    
+    db = get_db()
+    
+    # 获取客户信息
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
     
     if not client:
-        conn.close()
         flash('客户不存在', 'danger')
         return redirect(url_for('dashboard'))
     
-    # 获取客户的产品信息
-    client_products = conn.execute('''
-        SELECT cp.*, p.name as product_name, p.type as product_type, 
-               p.description as product_description, p.category
-        FROM client_product cp
-        JOIN product p ON cp.product_id = p.id
-        WHERE cp.client_id = ?
-        ORDER BY cp.expiry_date ASC
-    ''', (client_id,)).fetchall()
+    # 转换为字典
+    client_dict = dict_from_row(client)
     
-    # 整理客户产品信息，添加过期状态
-    formatted_products = []
-    for product in client_products:
+    # 获取总记录数
+    total = db.execute(
+        'SELECT COUNT(*) as count FROM client_product WHERE client_id = ?', 
+        (client_id,)
+    ).fetchone()['count']
+    
+    # 分页查询
+    offset = (page - 1) * per_page
+    products = db.execute(
+        '''SELECT cp.*, p.name as product_name, p.type as product_type,
+           p.description, p.category, p.details
+           FROM client_product cp 
+           JOIN product p ON cp.product_id = p.id 
+           WHERE cp.client_id = ? 
+           ORDER BY cp.created_at DESC LIMIT ? OFFSET ?''',
+        (client_id, per_page, offset)
+    ).fetchall()
+    
+    # 转换为字典并处理产品状态
+    products_list = []
+    for product in products:
         product_dict = dict_from_row(product)
         product_dict['status'] = check_product_expiry(product_dict)
-        formatted_products.append(product_dict)
+        products_list.append(product_dict)
     
-    # 获取可添加的产品列表
-    available_products = conn.execute('SELECT * FROM product').fetchall()
+    # 计算总页数
+    total_pages = (total + per_page - 1) // per_page
     
-    conn.close()
-    return render_template('client_products.html', 
-                          client=client, 
-                          products=formatted_products,  # 修改为products，与模板中一致
-                          available_products=available_products)
+    return render_template(
+        'client_products.html', 
+        client=client_dict,
+        client_id=client_id,
+        products=products_list,
+        page=page,
+        total_pages=total_pages,
+        is_client=current_user.is_client if hasattr(current_user, 'is_client') else False
+    )
 
 @app.route('/client/<int:client_id>')
 @login_required
 def view_client(client_id):
-    conn = get_db()
-    client = conn.execute('''
-        SELECT c.*, u.username as creator_name
+    """查看客户详细信息"""
+    db = get_db()
+    
+    # 改进查询，连接user表获取创建者的用户名
+    client = db.execute('''
+        SELECT c.*, u.username as creator_name 
         FROM client c
         LEFT JOIN user u ON c.user_id = u.id
         WHERE c.id = ?
     ''', (client_id,)).fetchone()
     
     if not client:
-        conn.close()
         flash('客户不存在', 'danger')
         return redirect(url_for('dashboard'))
     
-    # 获取客户的产品信息
-    client_products = conn.execute('''
-        SELECT cp.*, p.name as product_name
-        FROM client_product cp
-        JOIN product p ON cp.product_id = p.id
-        WHERE cp.client_id = ?
-        ORDER BY cp.expiry_date ASC
-    ''', (client_id,)).fetchall()
+    # 权限检查 - 使用统一函数
+    if not user_can_manage_client(client_id):
+        flash('您无权查看此客户信息', 'warning')
+        return redirect(url_for('dashboard'))
     
-    # 整理客户产品信息，添加过期状态
-    formatted_products = []
-    for product in client_products:
-        product_dict = dict_from_row(product)
-        product_dict['status'] = check_product_expiry(product)
-        formatted_products.append(product_dict)
+    # 获取其他客户相关数据...
     
-    conn.close()
-    return render_template('view_client.html', client=client, client_products=formatted_products)
+    return render_template('view_client.html', client=client)
 
 @app.route('/client/<int:client_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -1107,23 +1034,18 @@ def delete_client(client_id):
 @login_required
 def add_weight_record(client_id):
     # 获取客户信息
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    db = get_db()
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
     
+    # 确保客户存在
     if not client:
-        conn.close()
         flash('客户不存在', 'danger')
         return redirect(url_for('dashboard'))
     
-    # 获取上一次的体重记录，用于计算变化
-    last_record = conn.execute('''
-        SELECT * FROM weight_record 
-        WHERE client_id = ? 
-        ORDER BY record_date DESC LIMIT 1
-    ''', (client_id,)).fetchone()
-    
-    # 默认显示今天的日期
-    today_date = datetime.now().strftime('%Y-%m-%d')
+    # 修复权限检查 - 允许管理员和客户创建者添加记录
+    if not current_user.is_admin and client['user_id'] != current_user.id:
+        flash('无权为此客户添加记录', 'danger')
+        return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
         record_date = request.form.get('record_date')
@@ -1131,187 +1053,926 @@ def add_weight_record(client_id):
         breakfast = request.form.get('breakfast')
         lunch = request.form.get('lunch')
         dinner = request.form.get('dinner')
-        defecation = request.form.get('defecation')
+        defecation = 1 if request.form.get('defecation') == 'on' else 0
         
-        if not record_date or not morning_weight:
-            flash('请填写日期和体重', 'danger')
-            return render_template('add_weight_record.html', client=client, today_date=today_date)
+        # 计算体重变化
+        daily_change = None
+        total_change = None
         
-        # 计算变化
-        daily_change = 0
-        total_change = 0
+        # 获取前一天的记录
+        prev_record = db.execute(
+            'SELECT * FROM weight_record WHERE client_id = ? ORDER BY record_date DESC LIMIT 1',
+            (client_id,)
+        ).fetchone()
         
-        if last_record:
-            daily_change = float(morning_weight) - float(last_record['morning_weight'])
-            # 总变化是相对于第一条记录
-            first_record = conn.execute('''
-                SELECT * FROM weight_record 
-                WHERE client_id = ? 
-                ORDER BY record_date ASC LIMIT 1
-            ''', (client_id,)).fetchone()
-            if first_record:
-                total_change = float(morning_weight) - float(first_record['morning_weight'])
+        if prev_record and morning_weight:
+            daily_change = float(morning_weight) - float(prev_record['morning_weight'])
+            
+        if client['weight'] and morning_weight:
+            total_change = float(morning_weight) - float(client['weight'])
         
-        try:
-            conn.execute('''
-                INSERT INTO weight_record (record_date, morning_weight, breakfast, lunch, dinner, defecation, daily_change, total_change, client_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-            ''', (record_date, morning_weight, breakfast, lunch, dinner, defecation, daily_change, total_change, client_id))
-            conn.commit()
-            flash('减脂记录已添加', 'success')
-            return redirect(url_for('view_weight_records', client_id=client_id))
-        except Exception as e:
-            flash(f'添加记录时出错: {str(e)}', 'danger')
+        # 添加减脂记录
+        db.execute(
+            '''INSERT INTO weight_record
+               (record_date, morning_weight, breakfast, lunch, dinner, defecation, daily_change, total_change, client_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (record_date, morning_weight, breakfast, lunch, dinner, defecation, daily_change, total_change,
+             client_id, datetime.now().isoformat())
+        )
+        db.commit()
+        
+        flash('减脂记录已添加成功', 'success')
+        return redirect(url_for('view_client', client_id=client_id))
     
-    conn.close()
-    return render_template('add_weight_record.html', client=client, today_date=today_date)
+    # 如果是管理员查看其他用户的客户，获取创建者信息
+    creator = None
+    if current_user.is_admin and client['user_id'] != current_user.id:
+        creator = db.execute('SELECT username FROM user WHERE id = ?', (client['user_id'],)).fetchone()
+    
+    # 转换SQLite Row对象为字典
+    client_dict = dict_from_row(client)
+    
+    return render_template('add_weight_record.html', client=client_dict, 
+                           today_date=date.today().isoformat(),
+                           creator=creator['username'] if creator else None,
+                           is_admin=current_user.is_admin)
 
 @app.route('/client/<int:client_id>/weight_records')
 @login_required
 def view_weight_records(client_id):
     # 获取客户信息
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    db = get_db()
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
     
+    # 确保客户存在
     if not client:
-        conn.close()
         flash('客户不存在', 'danger')
         return redirect(url_for('dashboard'))
     
-    # 将客户信息转为字典
+    # 修复权限检查 - 允许管理员和客户创建者查看记录
+    if not current_user.is_admin and client['user_id'] != current_user.id:
+        flash('无权查看此客户的记录', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # 获取所有减脂记录
+    records = db.execute(
+        'SELECT * FROM weight_record WHERE client_id = ? ORDER BY record_date DESC',
+        (client_id,)
+    ).fetchall()
+    
+    # 转换记录为字典列表，并处理日期
+    records_list = []
+    for record in records:
+        record_dict = dict_from_row(record)
+        # 为了与SQLAlchemy模型兼容，将日期字符串转换为datetime对象
+        try:
+            record_dict['record_date'] = datetime.fromisoformat(record['record_date'])
+        except ValueError:
+            record_dict['record_date'] = datetime.strptime(record['record_date'], '%Y-%m-%d')
+        records_list.append(record_dict)
+    
+    # 如果是管理员查看其他用户的客户，获取创建者信息
+    creator = None
+    if current_user.is_admin and client['user_id'] != current_user.id:
+        creator = db.execute('SELECT username FROM user WHERE id = ?', (client['user_id'],)).fetchone()
+    
+    # 转换SQLite Row对象为字典
     client_dict = dict_from_row(client)
     
-    # 获取体重记录，按日期降序排列
-    records = conn.execute('''
-        SELECT * FROM weight_record 
-        WHERE client_id = ? 
-        ORDER BY record_date DESC
-    ''', (client_id,)).fetchall()
-    
-    # 将记录转换为字典列表并处理日期格式
-    record_list = []
-    for r in records:
-        record_dict = dict_from_row(r)
-        record_dict['morning_weight'] = float(record_dict['morning_weight']) if record_dict['morning_weight'] else 0.0
-        record_list.append(record_dict)
-    
-    conn.close()
-    return render_template('weight_records.html', 
-                          client=client_dict, 
-                          records=record_list)
+    return render_template('weight_records.html', client=client_dict, records=records_list,
+                           creator=creator['username'] if creator else None,
+                           is_admin=current_user.is_admin)
 
 # 体重管理路由
 @app.route('/client/<int:client_id>/weight_management/add', methods=['GET', 'POST'])
 @login_required
 def add_weight_management(client_id):
     # 获取客户信息
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    db = get_db()
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
     
+    # 确保客户存在
     if not client:
-        conn.close()
         flash('客户不存在', 'danger')
         return redirect(url_for('dashboard'))
     
-    # 默认显示今天的日期
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    
-    # 将客户信息转换为字典，方便前端使用
-    client_dict = dict_from_row(client)
-    
+    # 权限检查：管理员可以为所有客户添加记录，普通用户只能为自己创建的客户添加记录
+    if not current_user.is_admin and client['user_id'] != current_user.id:
+        flash('无权为此客户添加记录', 'danger')
+        return redirect(url_for('dashboard'))
+        
     if request.method == 'POST':
+        # 获取最新的序号
+        last_record = db.execute(
+            'SELECT sequence FROM weight_management WHERE client_id = ? ORDER BY sequence DESC LIMIT 1',
+            (client_id,)
+        ).fetchone()
+        sequence = 1 if not last_record else last_record['sequence'] + 1
+        
         record_date = request.form.get('record_date')
         before_weight = request.form.get('before_weight')
         after_weight = request.form.get('after_weight')
         measurements = request.form.get('measurements')
         notes = request.form.get('notes')
         
-        if not record_date or not before_weight or not after_weight:
-            flash('请填写必要的记录信息', 'danger')
-            return render_template('add_weight_management.html', client=client_dict, today_date=today_date)
+        # 添加体重管理记录
+        db.execute(
+            '''INSERT INTO weight_management
+               (sequence, record_date, before_weight, after_weight, measurements, notes, client_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+            (sequence, record_date, before_weight, after_weight, measurements, notes,
+             client_id, datetime.now().isoformat())
+        )
+        db.commit()
+        
+        flash('体重管理记录已添加成功', 'success')
+        return redirect(url_for('view_client', client_id=client_id))
+    
+    # 如果是管理员查看其他用户的客户，获取创建者信息
+    creator = None
+    if current_user.is_admin and client['user_id'] != current_user.id:
+        creator = db.execute('SELECT username FROM user WHERE id = ?', (client['user_id'],)).fetchone()
+    
+    # 转换SQLite Row对象为字典
+    client_dict = dict_from_row(client)
+    
+    return render_template('add_weight_management.html', client=client_dict,
+                           creator=creator['username'] if creator else None,
+                           is_admin=current_user.is_admin)
+
+@app.route('/client/<int:client_id>/weight_managements')
+@login_required
+def view_weight_managements(client_id):
+    # 获取客户信息
+    db = get_db()
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    
+    # 确保客户存在
+    if not client:
+        flash('客户不存在', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # 权限检查：管理员可以查看所有客户记录，普通用户只能查看自己创建的客户记录
+    if not current_user.is_admin and client['user_id'] != current_user.id:
+        flash('无权查看此客户的记录', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    # 获取所有体重管理记录
+    managements = db.execute(
+        'SELECT * FROM weight_management WHERE client_id = ? ORDER BY sequence ASC',
+        (client_id,)
+    ).fetchall()
+    
+    # 转换记录为字典列表，并处理日期
+    managements_list = []
+    for management in managements:
+        management_dict = dict_from_row(management)
+        # 为了与SQLAlchemy模型兼容，将日期字符串转换为datetime对象
+        try:
+            management_dict['record_date'] = datetime.fromisoformat(management['record_date'])
+        except ValueError:
+            management_dict['record_date'] = datetime.strptime(management['record_date'], '%Y-%m-%d')
+        managements_list.append(management_dict)
+    
+    # 如果是管理员查看其他用户的客户，获取创建者信息
+    creator = None
+    if current_user.is_admin and client['user_id'] != current_user.id:
+        creator = db.execute('SELECT username FROM user WHERE id = ?', (client['user_id'],)).fetchone()
+    
+    # 转换SQLite Row对象为字典
+    client_dict = dict_from_row(client)
+    
+    return render_template('weight_managements.html', client=client_dict, managements=managements_list,
+                           creator=creator['username'] if creator else None,
+                           is_admin=current_user.is_admin)
+
+# 管理员路由 - 用户管理
+@app.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    """管理员用户列表"""
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('SELECT * FROM user ORDER BY username')
+        users = [dict_from_row(row) for row in cursor.fetchall()]
+        return render_template('admin_users.html', users=users)
+    except Exception as e:
+        app.logger.error(f"访问用户管理页面时出错: {str(e)}")
+        flash(f'访问用户管理页面时出错: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+# 修改用户角色
+@app.route('/admin/user/<int:user_id>/role', methods=['POST'])
+@login_required
+def change_user_role(user_id):
+    # 检查是否为管理员
+    if not current_user.is_admin:
+        flash('无权执行此操作', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # 获取表单数据
+    new_role = request.form.get('role')
+    if new_role not in ['user', 'admin']:
+        flash('无效的角色', 'danger')
+        return redirect(url_for('admin_users'))
+    
+    # 防止管理员降级自己
+    if user_id == current_user.id:
+        flash('不能修改自己的角色', 'danger')
+        return redirect(url_for('admin_users'))
+    
+    # 更新用户角色
+    db = get_db()
+    db.execute('UPDATE user SET role = ? WHERE id = ?', (new_role, user_id))
+    db.commit()
+    
+    flash('用户角色已更新', 'success')
+    return redirect(url_for('admin_users'))
+
+# 删除用户
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    # 检查是否为管理员
+    if not current_user.is_admin:
+        flash('无权执行此操作', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    # 防止管理员删除自己
+    if user_id == current_user.id:
+        flash('不能删除自己的账户', 'danger')
+        return redirect(url_for('admin_users'))
+    
+    db = get_db()
+    
+    # 获取该用户创建的所有客户
+    clients = db.execute('SELECT id FROM client WHERE user_id = ?', (user_id,)).fetchall()
+    
+    # 删除每个客户的相关记录
+    for client in clients:
+        client_id = client['id']
+        db.execute('DELETE FROM weight_record WHERE client_id = ?', (client_id,))
+        db.execute('DELETE FROM weight_management WHERE client_id = ?', (client_id,))
+    
+    # 删除该用户的所有客户
+    db.execute('DELETE FROM client WHERE user_id = ?', (user_id,))
+    
+    # 删除用户
+    db.execute('DELETE FROM user WHERE id = ?', (user_id,))
+    db.commit()
+    
+    flash('用户及其所有数据已删除', 'success')
+    return redirect(url_for('admin_users'))
+
+# 模板上下文处理器（为所有模板添加公共函数和变量）
+@app.context_processor
+def utility_processor():
+    """为所有模板提供工具函数"""
+    from datetime import date, datetime
+    
+    return {
+        'date': date,
+        'now': datetime.now(),
+        'format_date': lambda d: d.strftime('%Y-%m-%d') if d else '',
+        'format_datetime': lambda dt: dt.strftime('%Y-%m-%d %H:%M') if dt else ''
+    }
+
+# 初始化数据库表结构
+@app.cli.command('init-db')
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    init_db()
+    print('Initialized the database.')
+
+# 将column_exists提取为全局函数，避免重复定义
+def column_exists(db, table_name, column_name):
+    """检查指定表中是否存在指定列"""
+    result = db.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(col['name'] == column_name for col in result)
+
+# 修复确保数据库存在函数，使用全局column_exists函数
+def ensure_db_exists():
+    """确保数据库存在并包含所需表"""
+    db_path = os.path.join(os.path.dirname(__file__), 'database.db')
+    if not os.path.exists(db_path):
+        # 如果数据库不存在，创建并初始化
+        init_db()
+        return
+    
+    # 如果数据库已存在，检查是否有所需的表
+    db = get_db()
+    
+    # 检查表是否存在的通用函数
+    def table_exists(table_name):
+        result = db.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'").fetchone()
+        return result is not None
+    
+    # 检查列是否存在的通用函数
+    def column_exists(table_name, column_name):
+        result = db.execute(f"PRAGMA table_info({table_name})").fetchall()
+        return any(col['name'] == column_name for col in result)
+        
+    # 检查并创建client表
+    if not table_exists('client'):
+        db.execute('''
+            CREATE TABLE client (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                gender TEXT,
+                age INTEGER,
+                phone TEXT UNIQUE,
+                address TEXT,
+                workplace TEXT,
+                breakfast TEXT,
+                lunch TEXT,
+                dinner TEXT,
+                night_snack TEXT,
+                cold_food TEXT,
+                sweet_food TEXT,
+                meat TEXT,
+                alcohol TEXT,
+                constitution TEXT,
+                water_drinking TEXT,
+                sleep TEXT,
+                defecation TEXT,
+                gynecology TEXT,
+                weight REAL,
+                height INTEGER,
+                waist INTEGER,
+                hip INTEGER,
+                leg INTEGER,
+                standard_weight REAL,
+                overweight REAL,
+                notes TEXT,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP,
+                user_id INTEGER,
+                FOREIGN KEY (user_id) REFERENCES user (id)
+            )
+        ''')
+        app.logger.info("创建client表")
+    else:
+        # 检查client表中是否有扩展字段，如果没有则添加
+        client_fields = [
+            'gender', 'age', 'workplace', 'breakfast', 'lunch', 'dinner', 
+            'night_snack', 'cold_food', 'sweet_food', 'meat', 'alcohol',
+            'constitution', 'water_drinking', 'sleep', 'defecation', 'gynecology',
+            'waist', 'hip', 'leg', 'standard_weight', 'overweight'
+        ]
+        
+        for field in client_fields:
+            if not column_exists('client', field):
+                field_type = 'INTEGER' if field in ['age', 'height', 'waist', 'hip', 'leg'] else 'REAL' if field in ['weight', 'standard_weight', 'overweight'] else 'TEXT'
+                db.execute(f'ALTER TABLE client ADD COLUMN {field} {field_type}')
+                app.logger.info(f"在client表中添加{field}列")
+            
+    # 检查user表中是否有client_id列，如果没有则添加
+    if table_exists('user') and not column_exists('user', 'client_id'):
+        db.execute('ALTER TABLE user ADD COLUMN client_id INTEGER')
+        app.logger.info("在user表中添加client_id列")
+        
+    # 检查user表中是否有name列，如果没有则添加
+    if table_exists('user') and not column_exists('user', 'name'):
+        db.execute('ALTER TABLE user ADD COLUMN name TEXT')
+        app.logger.info("在user表中添加name列")
+        
+    # 检查user表中是否有phone列，如果没有则添加
+    if table_exists('user') and not column_exists('user', 'phone'):
+        db.execute('ALTER TABLE user ADD COLUMN phone TEXT')
+        app.logger.info("在user表中添加phone列")
+        
+    # 检查user表中是否有email列，如果没有则添加
+    if table_exists('user') and not column_exists('user', 'email'):
+        db.execute('ALTER TABLE user ADD COLUMN email TEXT')
+        app.logger.info("在user表中添加email列")
+    
+    # 检查并创建product表
+    if not table_exists('product'):
+        db.execute('''
+            CREATE TABLE product (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                type TEXT CHECK(type IN ('count', 'period')),
+                price REAL,
+                default_count INTEGER,
+                default_days INTEGER,
+                category TEXT,
+                details TEXT,
+                validity_days INTEGER,
+                sessions INTEGER,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP
+            )
+        ''')
+        app.logger.info("创建product表")
+    else:
+        # 检查product表中是否有扩展字段，如果没有则添加
+        product_fields = [
+            'default_count', 'default_days', 'details', 'validity_days', 'sessions'
+        ]
+        
+        for field in product_fields:
+            if not column_exists('product', field):
+                field_type = 'INTEGER' if field in ['default_count', 'default_days', 'validity_days', 'sessions'] else 'TEXT'
+                db.execute(f'ALTER TABLE product ADD COLUMN {field} {field_type}')
+                app.logger.info(f"在product表中添加{field}列")
+    
+    # 检查并创建client_product表
+    if not table_exists('client_product'):
+        db.execute('''
+            CREATE TABLE client_product (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                purchase_date TEXT,
+                start_date TEXT,
+                remaining_sessions INTEGER,
+                expiry_date TEXT,
+                status TEXT CHECK(status IN ('active', 'expired', 'used_up')),
+                notes TEXT,
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP,
+                FOREIGN KEY (client_id) REFERENCES client (id),
+                FOREIGN KEY (product_id) REFERENCES product (id)
+            )
+        ''')
+        app.logger.info("创建client_product表")
+    
+    db.commit()
+
+# 添加内存缓存系统
+import time
+from functools import wraps
+
+# 缓存存储
+_page_cache = {}
+
+def cache_page(timeout=60):
+    """页面缓存装饰器，根据URL和用户缓存页面"""
+    def decorator(view):
+        @wraps(view)
+        def decorated_function(*args, **kwargs):
+            # 针对不同用户有不同的缓存
+            user_id = current_user.id if current_user.is_authenticated else 'guest'
+            cache_key = f"{request.path}:{user_id}"
+            
+            # 检查缓存是否存在且未过期
+            if cache_key in _page_cache:
+                cached_data = _page_cache[cache_key]
+                if cached_data['expires'] > time.time():
+                    return cached_data['response']
+            
+            # 执行视图函数获取响应
+            response = view(*args, **kwargs)
+            
+            # 只缓存GET请求的200响应
+            if request.method == 'GET' and (
+                hasattr(response, 'status_code') and response.status_code == 200
+            ):
+                _page_cache[cache_key] = {
+                    'response': response,
+                    'expires': time.time() + timeout
+                }
+            
+            return response
+        return decorated_function
+    return decorator
+
+# 应用于产品列表页面
+@app.route('/products')
+@login_required
+@cache_page(timeout=300)  # 缓存5分钟
+def products():
+    """显示所有产品"""
+    db = get_db()
+    products = db.execute('SELECT * FROM product ORDER BY name').fetchall()
+    products = [dict_from_row(product) for product in products]
+    
+    return render_template('products.html', products=products)
+
+@app.route('/product/add', methods=['GET', 'POST'])
+@login_required
+def add_product():
+    """添加新产品"""
+    # 使用统一的权限检查方式
+    if not current_user.is_admin:
+        flash('只有管理员可以添加产品', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        # 获取表单数据
+        name = request.form.get('name', '')
+        price = request.form.get('price', '')
+        product_type = request.form.get('type', '')
+        category = request.form.get('category', '')
+        sessions = request.form.get('sessions', '')
+        validity_days = request.form.get('validity_days', '')
+        description = request.form.get('description', '')
+        details = request.form.get('details', '')
+        
+        # 简单验证
+        if not name or not price or not product_type:
+            flash('产品名称、价格和类型为必填项', 'danger')
+            return render_template('add_product.html')
+        
+        # 验证产品类型相关字段
+        if product_type == 'count' and not sessions:
+            flash('次数卡必须指定使用次数', 'danger')
+            return render_template('add_product.html')
+        
+        if product_type == 'period' and not validity_days:
+            flash('期限卡必须指定有效期天数', 'danger')
+            return render_template('add_product.html')
+        
+        # 验证价格
+        try:
+            price = float(price)
+            if price < 0:
+                raise ValueError("价格不能为负数")
+        except ValueError:
+            flash('价格必须是有效的正数', 'danger')
+            return render_template('add_product.html')
+        
+        # 处理sessions和validity_days
+        if sessions and sessions.isdigit():
+            sessions = int(sessions)
+            default_count = sessions
+        else:
+            sessions = None
+            default_count = None
+            
+        if validity_days and validity_days.isdigit():
+            validity_days = int(validity_days)
+            default_days = validity_days
+        else:
+            validity_days = None
+            default_days = None
+        
+        # 创建产品记录
+        try:
+            db = get_db()
+            db.execute('BEGIN TRANSACTION')  # 添加事务
+            
+            current_time = datetime.now().isoformat()
+            
+            db.execute(
+                '''INSERT INTO product 
+                   (name, description, type, price, default_count, default_days, 
+                   category, details, validity_days, sessions, created_at, updated_at) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (name, description, product_type, price, default_count, default_days, 
+                 category, details, validity_days, sessions, current_time, current_time)
+            )
+            db.commit()
+            
+            flash(f'产品 {name} 添加成功', 'success')
+            return redirect(url_for('products'))
+            
+        except Exception as e:
+            db.rollback()  # 回滚事务
+            app.logger.error(f"添加产品时出错: {str(e)}")
+            flash(f'添加产品时出错: {str(e)}', 'danger')
+            return render_template('add_product.html')
+    
+    # GET请求，显示表单
+    return render_template('add_product.html')
+
+@app.route('/product/edit/<int:product_id>', methods=['GET', 'POST'])
+@login_required
+def edit_product(product_id):
+    """编辑产品"""
+    # 检查用户权限，仅管理员可以编辑产品
+    if not current_user.is_admin:
+        flash('您没有权限编辑产品', 'danger')
+        return redirect(url_for('products'))
+    
+    # 获取产品信息
+    db = get_db()
+    product = db.execute('SELECT * FROM product WHERE id = ?', (product_id,)).fetchone()
+    
+    if not product:
+        flash('产品不存在', 'danger')
+        return redirect(url_for('products'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        price = float(request.form.get('price'))
+        type = request.form.get('type')
+        category = request.form.get('category')
+        description = request.form.get('description', '')
+        validity_days = int(request.form.get('validity_days', 0))
+        sessions = request.form.get('sessions')
+        sessions = int(sessions) if sessions and sessions.strip() else None
+        details = request.form.get('details', '')
+        
+        # 根据类型设置默认次数或默认天数
+        default_count = None
+        default_days = None
+        
+        if type == 'count':
+            default_count = sessions
+        elif type == 'period':
+            default_days = validity_days
         
         try:
-            # 获取最新的序号
-            last_record = conn.execute(
-                'SELECT sequence FROM weight_management WHERE client_id = ? ORDER BY sequence DESC LIMIT 1',
-                (client_id,)
+            db.execute(
+                '''UPDATE product SET 
+                   name = ?, price = ?, type = ?, category = ?, description = ?, 
+                   validity_days = ?, sessions = ?, default_count = ?, default_days = ?, details = ? 
+                   WHERE id = ?''',
+                (name, price, type, category, description, validity_days, sessions, 
+                default_count, default_days, details, product_id)
+            )
+            db.commit()
+            flash('产品更新成功！', 'success')
+            return redirect(url_for('products'))
+        except sqlite3.Error as e:
+            flash(f'更新产品失败: {str(e)}', 'danger')
+    
+    return render_template('product_form.html', product=product)
+
+@app.route('/product/delete/<int:product_id>', methods=['POST'])
+@login_required
+def delete_product(product_id):
+    """删除产品"""
+    # 检查用户权限，仅管理员可以删除产品
+    if not current_user.is_admin:
+        flash('您没有权限删除产品', 'danger')
+        return redirect(url_for('products'))
+    
+    db = get_db()
+    try:
+        # 检查产品是否已被客户购买
+        client_products = db.execute('SELECT COUNT(*) as count FROM client_product WHERE product_id = ?', (product_id,)).fetchone()
+        if client_products['count'] > 0:
+            flash('该产品已有客户购买，无法删除', 'danger')
+            return redirect(url_for('products'))
+        
+        db.execute('DELETE FROM product WHERE id = ?', (product_id,))
+        db.commit()
+        flash('产品删除成功！', 'success')
+    except sqlite3.Error as e:
+        flash(f'删除产品失败: {str(e)}', 'danger')
+    
+    return redirect(url_for('products'))
+
+# 客户账户相关路由
+@app.route('/client/login', methods=['GET', 'POST'])
+def client_login():
+    if request.method == 'POST':
+        try:
+            phone = request.form.get('phone', '')
+            password = request.form.get('password', '')
+            
+            # 输入验证
+            if not phone or not password:
+                flash('请输入手机号和密码', 'danger')
+                return render_template('client_login.html')
+            
+            # 简化数据库查询和错误处理
+            db = get_db()
+            user_data = db.execute(
+                'SELECT id, username, password_hash, role, client_id FROM user WHERE username = ?', 
+                (phone,)
             ).fetchone()
             
-            sequence = 1
-            if last_record and 'sequence' in last_record.keys():
-                sequence = last_record['sequence'] + 1
-            
-            conn.execute('''
-                INSERT INTO weight_management (client_id, sequence, record_date, before_weight, after_weight, measurements, notes, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-            ''', (client_id, sequence, record_date, before_weight, after_weight, measurements, notes))
-            
-            conn.commit()
-            flash('体重管理记录已添加', 'success')
-            return redirect(url_for('view_weight_managements', client_id=client_id))
+            if user_data and check_password_hash(user_data['password_hash'], password):
+                # 成功登录，清除之前的会话
+                session.clear()
+                
+                # 设置会话数据
+                session['client_id'] = user_data['id']
+                session['user_type'] = 'client'  # 标记为客户会话
+                
+                flash('登录成功！', 'success')
+                return redirect(url_for('client_dashboard'))
+            else:
+                flash('手机号或密码不正确', 'danger')
+                
         except Exception as e:
-            flash(f'添加记录时出错: {str(e)}', 'danger')
+            app.logger.error(f"客户登录过程中出现异常: {str(e)}")
+            flash('登录过程中出现错误，请稍后再试', 'danger')
+        
+    return render_template('client_login.html')
+
+@app.route('/client/logout')
+def client_logout():
+    """客户退出登录"""
+    try:
+        # 清除会话
+        session.clear()
+        flash('您已成功退出登录', 'success')
+    except Exception as e:
+        app.logger.error(f"客户退出登录时出错: {str(e)}")
     
-    conn.close()
-    return render_template('add_weight_management.html', client=client_dict, today_date=today_date)
+    return redirect(url_for('client_login'))
+
+@app.route('/client/change_password', methods=['POST'])
+def client_change_password():
+    """客户修改密码"""
+    phone = request.form.get('phone')
+    old_password = request.form.get('old_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    if not phone or not old_password or not new_password or not confirm_password:
+        flash('请完整填写所有字段', 'danger')
+        return redirect(url_for('client_login'))
+    
+    if new_password != confirm_password:
+        flash('两次输入的新密码不一致', 'danger')
+        return redirect(url_for('client_login'))
+    
+    db = get_db()
+    # 查找客户
+    client = db.execute('SELECT * FROM client WHERE phone = ?', (phone,)).fetchone()
+    
+    if not client:
+        flash('手机号码不存在，请确认后重试', 'danger')
+        return redirect(url_for('client_login'))
+    
+    # 查找对应的用户账号
+    user = db.execute(
+        'SELECT * FROM user WHERE client_id = ? AND role = "client"', 
+        (client['id'],)
+    ).fetchone()
+    
+    if not user:
+        flash('此账号尚未激活，请先登录', 'danger')
+        return redirect(url_for('client_login'))
+    
+    # 验证旧密码
+    if not check_password_hash(user['password_hash'], old_password):
+        flash('原密码错误，请重试', 'danger')
+        return redirect(url_for('client_login'))
+    
+    # 更新密码
+    password_hash = generate_password_hash(new_password)
+    db.execute(
+        'UPDATE user SET password_hash = ? WHERE id = ?',
+        (password_hash, user['id'])
+    )
+    db.commit()
+    
+    flash('密码修改成功，请使用新密码登录', 'success')
+    return redirect(url_for('client_login'))
 
 @app.route('/client/dashboard')
 def client_dashboard():
-    if 'client_id' not in session:
-        flash('请先登录', 'warning')
+    """客户仪表板"""
+    try:
+        # 确认是客户会话
+        if 'client_id' not in session:
+            app.logger.warning("未经授权的客户仪表板访问尝试")
+            flash('请先登录客户账户', 'warning')
+            return redirect(url_for('client_login'))
+            
+        user_id = session['client_id']
+        
+        # 获取数据库连接
+        db = get_db()
+        
+        # 添加调试日志
+        app.logger.info(f"客户仪表板: 用户ID={user_id}, session={session}")
+        
+        # 获取用户信息
+        user_data = db.execute('SELECT * FROM user WHERE id = ?', (user_id,)).fetchone()
+        
+        if not user_data:
+            app.logger.error(f"客户仪表板: 用户ID {user_id} 不存在")
+            flash('用户信息不存在', 'danger')
+            session.clear()
+            return redirect(url_for('client_login'))
+            
+        # 将SQLite Row转换为字典 - 关键修复
+        user = dict_from_row(user_data)
+        
+        # 获取关联的客户信息 - 使用索引访问而不是get方法
+        # 注意：Row对象可以使用索引或属性访问，但没有get方法
+        client_id = None
+        if 'client_id' in user and user['client_id']:
+            client_id = user['client_id']
+            
+        # 如果没有关联的客户ID，尝试通过手机号查找
+        if not client_id:
+            phone = user['username']
+            client_data = db.execute('SELECT * FROM client WHERE phone = ?', (phone,)).fetchone()
+            if client_data:
+                # 转换为字典
+                client = dict_from_row(client_data)
+                client_id = client['id']
+                # 更新用户记录
+                db.execute('UPDATE user SET client_id = ? WHERE id = ?', (client_id, user_id))
+                db.commit()
+            else:
+                # 创建默认客户对象
+                client = {
+                    'id': 0,
+                    'name': user.get('name', user.get('username', '未知客户')),
+                    'phone': user.get('phone', user.get('username', '未知手机号'))
+                }
+                flash('未找到您的客户信息，请联系管理员', 'warning')
+        else:
+            # 获取客户详细信息
+            client_data = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+            if client_data:
+                client = dict_from_row(client_data)
+            else:
+                client = {
+                    'id': client_id,
+                    'name': user.get('name', user.get('username', '未知客户')),
+                    'phone': user.get('phone', user.get('username', '未知手机号'))
+                }
+        
+        # 获取产品数据
+        products = []
+        if client_id:
+            try:
+                products_data = db.execute('''
+                    SELECT cp.*, p.name as product_name, p.category, p.type as product_type
+                    FROM client_product cp
+                    JOIN product p ON cp.product_id = p.id
+                    WHERE cp.client_id = ?
+                    ORDER BY cp.purchase_date DESC
+                ''', (client_id,)).fetchall()
+                
+                # 转换每个Row对象为字典
+                for product_row in products_data:
+                    product_dict = dict_from_row(product_row)
+                    product_dict['status'] = check_product_expiry(product_dict)
+                    products.append(product_dict)
+            except Exception as e:
+                app.logger.error(f"客户仪表板: 获取产品数据失败: {str(e)}")
+        
+        # 获取体重记录
+        weight_records = []
+        if client_id:
+            try:
+                # 同样处理体重记录
+                records = db.execute('''
+                    SELECT * FROM weight_record 
+                    WHERE client_id = ? 
+                    ORDER BY record_date DESC
+                ''', (client_id,)).fetchall()
+                
+                for record in records:
+                    weight_records.append(dict_from_row(record))
+            except Exception as e:
+                app.logger.error(f"客户仪表板: 获取体重记录失败: {str(e)}")
+        
+        # 获取预约
+        appointments = []
+        if client_id:
+            try:
+                # 处理预约数据
+                appt_data = db.execute('''
+                    SELECT * FROM appointment
+                    WHERE client_id = ?
+                    ORDER BY appointment_date DESC
+                ''', (client_id,)).fetchall()
+                
+                for appt in appt_data:
+                    appointments.append(dict_from_row(appt))
+            except Exception as e:
+                app.logger.error(f"客户仪表板: 获取预约失败: {str(e)}")
+        
+        # 获取使用记录
+        usage_records = []
+        if client_id:
+            try:
+                # 处理使用记录
+                usage_data = db.execute('''
+                    SELECT pu.*, p.name as product_name, u.username as operator_name
+                    FROM product_usage pu
+                    JOIN client_product cp ON pu.client_product_id = cp.id
+                    JOIN product p ON cp.product_id = p.id
+                    LEFT JOIN user u ON pu.operator_id = u.id
+                    WHERE cp.client_id = ?
+                    ORDER BY pu.usage_date DESC
+                ''', (client_id,)).fetchall()
+                
+                for usage in usage_data:
+                    usage_records.append(dict_from_row(usage))
+            except Exception as e:
+                app.logger.error(f"客户仪表板: 获取使用记录失败: {str(e)}")
+        
+        # 返回模板与数据
+        return render_template(
+            'client_dashboard.html', 
+            client=client,
+            user=user,
+            products=products,
+            weight_records=weight_records,
+            appointments=appointments,
+            usage_records=usage_records
+        )
+    except Exception as e:
+        app.logger.error(f"客户仪表板加载异常: {str(e)}")
+        flash('加载客户仪表板时出错，请稍后再试', 'danger')
         return redirect(url_for('client_login'))
-    
-    client_id = session['client_id']
-    
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
-    
-    if not client:
-        conn.close()
-        session.pop('client_id', None)
-        flash('客户不存在，请重新登录', 'danger')
-        return redirect(url_for('client_login'))
-    
-    # 获取客户的产品信息
-    client_products = conn.execute('''
-        SELECT cp.*, p.name as product_name 
-        FROM client_product cp
-        JOIN product p ON cp.product_id = p.id
-        WHERE cp.client_id = ?
-        ORDER BY cp.expiry_date ASC
-    ''', (client_id,)).fetchall()
-    
-    # 整理客户产品信息，添加过期状态
-    formatted_products = []
-    for product in client_products:
-        product_dict = dict_from_row(product)
-        product_dict['status'] = check_product_expiry(product)
-        formatted_products.append(product_dict)
-    
-    # 获取客户的预约信息
-    appointments = conn.execute('''
-        SELECT * FROM appointment
-        WHERE client_id = ? AND status != 'cancelled'
-        ORDER BY appointment_date ASC, appointment_time ASC
-    ''', (client_id,)).fetchall()
-    
-    # 获取客户的体重记录
-    weight_records = conn.execute('''
-        SELECT * FROM weight_record
-        WHERE client_id = ?
-        ORDER BY record_date DESC
-        LIMIT 5
-    ''', (client_id,)).fetchall()
-    
-    conn.close()
-    
-    return render_template(
-        'client_dashboard.html', 
-        client=client, 
-        client_products=formatted_products, 
-        appointments=appointments, 
-        weight_records=weight_records
-    )
 
 @app.route('/available_times')
 def available_times():
@@ -1752,8 +2413,7 @@ def check_session_type():
         # 仅管理员页面列表 - 只有管理员可以访问
         admin_only_endpoints = ['admin_users', 'add_product', 'edit_product', 'delete_product',
                               'admin_manage_appointments', 'admin_confirm_appointment', 
-                              'admin_complete_appointment', 'admin_statistics',
-                              'admin_operators', 'add_operator', 'edit_operator', 'delete_operator']
+                              'admin_complete_appointment']
         
         # 检查当前请求的endpoint是否在客户专属页面列表中
         if request.endpoint in client_only_endpoints:
@@ -1953,27 +2613,7 @@ def client_register():
     
     return render_template('client_register.html')
 
-def ensure_db_exists():
-    """确保数据库存在并初始化所需表结构"""
-    try:
-        with app.app_context():
-            # 尝试获取数据库连接
-            db = get_db()
-            
-            # 检查是否有表结构
-            tables = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
-            if not tables:
-                app.logger.info("数据库表不存在，开始初始化数据库...")
-                init_db()
-                app.logger.info("数据库初始化完成")
-            else:
-                app.logger.info(f"数据库已存在，包含 {len(tables)} 个表")
-                
-            return True
-    except Exception as e:
-        app.logger.error(f"确保数据库存在时出错: {str(e)}")
-        return False
-
+# 替换为CLI命令和app.app_context()方式
 @app.cli.command('init-app')
 def init_app_command():
     """初始化应用数据库和必要配置"""
@@ -2010,31 +2650,31 @@ def user_can_manage_client(client_id):
 @app.route('/api/client/<int:client_id>/products')
 @login_required
 def api_client_products(client_id):
-    # 检查权限：管理员可以查看所有客户，普通用户只能查看自己创建的客户
-    if not current_user.is_admin and not user_can_manage_client(client_id):
-        return jsonify({"error": "权限不足，无法访问此客户"}), 403
-
-    # 获取客户的产品信息
-    conn = get_db()
-    products = conn.execute('''
-        SELECT cp.id, cp.client_id, cp.product_id, cp.purchase_date, cp.remaining_count, 
-               cp.expiry_date, cp.status, p.name as product_name, p.type as product_type
+    """异步加载客户产品数据"""
+    db = get_db()
+    
+    # 权限检查
+    client = db.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
+    if not client:
+        return jsonify({'error': '客户不存在'}), 404
+    
+    if not current_user.is_admin and client['user_id'] != current_user.id:
+        return jsonify({'error': '无权访问'}), 403
+    
+    # 查询产品数据
+    products = db.execute('''
+        SELECT cp.*, p.name as product_name, 
+               p.description as product_description
         FROM client_product cp
         JOIN product p ON cp.product_id = p.id
         WHERE cp.client_id = ?
-        ORDER BY cp.expiry_date ASC
+        ORDER BY cp.created_at DESC
     ''', (client_id,)).fetchall()
     
-    # 格式化产品信息
-    product_list = []
-    for product in products:
-        product_dict = dict_from_row(product)
-        # 检查产品是否过期
-        product_dict['status'] = check_product_expiry(product)
-        product_list.append(product_dict)
+    # 转换为字典列表
+    result = [dict_from_row(p) for p in products]
     
-    conn.close()
-    return jsonify({"products": product_list})
+    return jsonify(result)
 
 # 应用配置优化
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 静态文件缓存一年
@@ -2048,331 +2688,132 @@ app.jinja_env.auto_reload = False  # 关闭自动重新加载
 # 添加管理员统计报表路由
 @app.route('/admin/statistics')
 @login_required
+@admin_required
 def admin_statistics():
-    """管理员统计页面 - 带日期筛选功能"""
+    """管理员统计面板"""
+    # 获取开始日期和结束日期参数，默认为过去7天
+    end_date = request.args.get('end_date', date.today().isoformat())
+    start_date = request.args.get('start_date', (date.today() - timedelta(days=7)).isoformat())
+    
+    # 尝试转换日期格式
+    try:
+        if isinstance(end_date, str):
+            end_date = date.fromisoformat(end_date)
+        if isinstance(start_date, str):
+            start_date = date.fromisoformat(start_date)
+    except ValueError:
+        flash('日期格式无效', 'danger')
+        end_date = date.today()
+        start_date = end_date - timedelta(days=7)
+    
+    # 如果开始日期大于结束日期，则交换
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    
     db = get_db()
     
-    # 获取筛选参数
-    start_date = request.args.get('start_date', '')
-    end_date = request.args.get('end_date', '')
+    # 新增产品统计
+    new_products = db.execute('''
+        SELECT cp.created_at, p.name as product_name, c.name as client_name, 
+               u.username as creator_name, cp.notes
+        FROM client_product cp
+        JOIN product p ON cp.product_id = p.id
+        JOIN client c ON cp.client_id = c.id
+        JOIN user u ON c.user_id = u.id
+        WHERE date(cp.created_at) BETWEEN ? AND ?
+        ORDER BY cp.created_at DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    # 构建日期筛选查询部分
-    product_date_filter = ""
-    product_date_params = {}
+    # 产品使用统计
+    product_usages = db.execute('''
+        SELECT pu.usage_date, cp.client_id, c.name as client_name, 
+               p.name as product_name, pu.count_used, 
+               u.username as operator_name, pu.notes
+        FROM product_usage pu
+        JOIN client_product cp ON pu.client_product_id = cp.id
+        JOIN client c ON cp.client_id = c.id
+        JOIN product p ON cp.product_id = p.id
+        JOIN user u ON pu.operator_id = u.id
+        WHERE date(pu.usage_date) BETWEEN ? AND ?
+        ORDER BY pu.usage_date DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    usage_date_filter = ""
-    usage_date_params = {}
+    # 新增客户统计
+    new_clients = db.execute('''
+        SELECT c.created_at, c.name, c.phone, c.gender, c.age,
+               u.username as creator_name
+        FROM client c
+        JOIN user u ON c.user_id = u.id
+        WHERE date(c.created_at) BETWEEN ? AND ?
+        ORDER BY c.created_at DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    if start_date:
-        product_date_filter += " AND strftime('%Y-%m-%d', cp.purchase_date) >= :start_date"
-        product_date_params['start_date'] = start_date
-        
-        usage_date_filter += " AND strftime('%Y-%m-%d', cpu.usage_date) >= :start_date"
-        usage_date_params['start_date'] = start_date
+    # 按创建者分组统计新增客户数量
+    clients_by_creator = db.execute('''
+        SELECT u.username as creator_name, COUNT(*) as client_count
+        FROM client c
+        JOIN user u ON c.user_id = u.id
+        WHERE date(c.created_at) BETWEEN ? AND ?
+        GROUP BY c.user_id
+        ORDER BY client_count DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    if end_date:
-        product_date_filter += " AND strftime('%Y-%m-%d', cp.purchase_date) <= :end_date"
-        product_date_params['end_date'] = end_date
-        
-        usage_date_filter += " AND strftime('%Y-%m-%d', cpu.usage_date) <= :end_date"
-        usage_date_params['end_date'] = end_date
+    # 按创建者分组统计新增产品数量
+    products_by_creator = db.execute('''
+        SELECT u.username as creator_name, COUNT(*) as product_count
+        FROM client_product cp
+        JOIN client c ON cp.client_id = c.id
+        JOIN user u ON c.user_id = u.id
+        WHERE date(cp.created_at) BETWEEN ? AND ?
+        GROUP BY c.user_id
+        ORDER BY product_count DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    # 基本统计信息
-    product_count = db.execute('SELECT COUNT(*) FROM product').fetchone()[0]
-    client_count = db.execute('SELECT COUNT(*) FROM client').fetchone()[0]
-    usage_count = db.execute('SELECT COUNT(*) FROM client_product_usage').fetchone()[0]
+    # 按操作者分组统计产品使用记录数量
+    usages_by_operator = db.execute('''
+        SELECT u.username as operator_name, COUNT(*) as usage_count
+        FROM product_usage pu
+        JOIN user u ON pu.operator_id = u.id
+        WHERE date(pu.usage_date) BETWEEN ? AND ?
+        GROUP BY pu.operator_id
+        ORDER BY usage_count DESC
+    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
     
-    # 客户创建者统计 - 使用简单查询避免复杂JOIN
-    creator_stats = []
-    users = db.execute('SELECT id, username FROM user').fetchall()
-    
-    for user in users:
-        count = db.execute(
-            'SELECT COUNT(*) FROM client WHERE user_id = ?',
-            (user['id'],)
-        ).fetchone()[0]
-        creator_stats.append({
-            'id': user['id'],
-            'username': user['username'],
-            'client_count': count
-        })
-    
-    # 排序创建者统计
-    creator_stats.sort(key=lambda x: x['client_count'], reverse=True)
-    
-    # 近期添加的客户
-    recent_clients = db.execute(
-        'SELECT * FROM client ORDER BY id DESC LIMIT 10'
-    ).fetchall()
-    
-    # 近期产品使用记录
-    try:
-        recent_usages = db.execute(
-            'SELECT cpu.id, cpu.usage_date, '
-            'c.id as client_id, c.name as client_name, '
-            'p.name as product_name '
-            'FROM client_product_usage cpu '
-            'JOIN client_product cp ON cpu.client_product_id = cp.id '
-            'JOIN client c ON cp.client_id = c.id '
-            'JOIN product p ON cp.product_id = p.id '
-            'ORDER BY cpu.id DESC LIMIT 10'
-        ).fetchall()
-    except Exception as e:
-        print(f"获取近期使用记录错误: {e}")
-        recent_usages = []
-    
-    # 检查client_product表结构
-    try:
-        cursor = db.execute("PRAGMA table_info(client_product)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
-        
-        has_remaining_count = 'remaining_count' in column_names
-        has_created_by = 'created_by' in column_names
-        
-        print(f"client_product表列: {column_names}")
-    except Exception as e:
-        print(f"获取表结构错误: {e}")
-        has_remaining_count = False
-        has_created_by = False
-    
-    # 产品销售记录 - 根据表结构调整查询
-    try:
-        product_sales_query = '''
-            SELECT 
-                cp.id, 
-                c.name as client_name,
-                p.name as product_name,
-                p.price,
-                cp.''' + ('remaining_count' if has_remaining_count else 'remaining_sessions') + ''' as remaining_sessions,
-                p.sessions as total_sessions
-            FROM client_product cp
-            JOIN client c ON cp.client_id = c.id
-            JOIN product p ON cp.product_id = p.id
-            WHERE 1=1 ''' + product_date_filter + '''
-            ORDER BY cp.id DESC
-            LIMIT 20
-        '''
-        product_sales = db.execute(product_sales_query, product_date_params).fetchall()
-    except Exception as e:
-        print(f"获取产品销售记录错误: {e}")
-        product_sales = []
-    
-    # 产品销售统计 - 调整查询
-    try:
-        product_sales_stats_query = '''
-            SELECT 
-                p.name as product_name,
-                COUNT(cp.id) as sales_count,
-                SUM(p.price) as total_sales_amount,
-                SUM(p.sessions) as total_sessions_sold
-            FROM product p
-            JOIN client_product cp ON p.id = cp.product_id
-            WHERE 1=1 ''' + product_date_filter + '''
-            GROUP BY p.id
-            ORDER BY sales_count DESC
-        '''
-        product_sales_stats = db.execute(product_sales_stats_query, product_date_params).fetchall()
-    except Exception as e:
-        print(f"获取产品销售统计错误: {e}")
-        product_sales_stats = []
-    
-    # 产品创建者统计 - 根据表结构调整查询
-    product_seller_stats = []
-    try:
-        if has_created_by:
-            product_seller_stats_query = '''
-                SELECT 
-                    u.username,
-                    COUNT(cp.id) as sales_count,
-                    SUM(p.price) as total_sales_amount,
-                    COUNT(DISTINCT p.id) as product_types,
-                    COUNT(DISTINCT cp.client_id) as client_count
-                FROM user u
-                JOIN client_product cp ON u.id = cp.created_by
-                JOIN product p ON cp.product_id = p.id
-                WHERE 1=1 ''' + product_date_filter + '''
-                GROUP BY u.id
-                ORDER BY sales_count DESC
-            '''
-            product_seller_stats = db.execute(product_seller_stats_query, product_date_params).fetchall()
-        else:
-            # 如果没有created_by字段，使用client.user_id作为替代
-            product_seller_stats_query = '''
-                SELECT 
-                    u.username,
-                    COUNT(cp.id) as sales_count,
-                    SUM(p.price) as total_sales_amount,
-                    COUNT(DISTINCT p.id) as product_types,
-                    COUNT(DISTINCT cp.client_id) as client_count
-                FROM user u
-                JOIN client c ON u.id = c.user_id
-                JOIN client_product cp ON c.id = cp.client_id
-                JOIN product p ON cp.product_id = p.id
-                WHERE 1=1 ''' + product_date_filter + '''
-                GROUP BY u.id
-                ORDER BY sales_count DESC
-            '''
-            product_seller_stats = db.execute(product_seller_stats_query, product_date_params).fetchall()
-    except Exception as e:
-        print(f"获取产品创建者统计错误: {e}")
-    
-    # 产品使用统计 - 使用命名参数和strftime处理日期
-    try:
-        product_usage_query = '''
-            SELECT 
-                p.name,
-                COUNT(cpu.id) as usage_count,
-                SUM(cpu.amount_used) as total_used
-            FROM product p
-            JOIN client_product cp ON p.id = cp.product_id
-            JOIN client_product_usage cpu ON cp.id = cpu.client_product_id
-            WHERE 1=1 ''' + usage_date_filter + '''
-            GROUP BY p.id
-            ORDER BY usage_count DESC
-        '''
-        product_usage = db.execute(product_usage_query, usage_date_params).fetchall()
-    except Exception as e:
-        print(f"获取产品使用统计错误: {e}")
-        product_usage = []
-    
-    # 操作人员使用统计 - 使用命名参数和strftime处理日期
-    try:
-        operator_usage_query = '''
-            SELECT 
-                o.id,
-                o.name as operator_name,
-                o.position,
-                COUNT(cpu.id) as usage_count,
-                SUM(cpu.amount_used) as total_used,
-                COUNT(DISTINCT c.id) as client_count,
-                COUNT(DISTINCT p.id) as product_type_count
-            FROM operators o
-            JOIN client_product_usage cpu ON o.id = cpu.operator_id
-            JOIN client_product cp ON cpu.client_product_id = cp.id
-            JOIN client c ON cp.client_id = c.id
-            JOIN product p ON cp.product_id = p.id
-            WHERE 1=1 ''' + usage_date_filter + '''
-            GROUP BY o.id
-            ORDER BY usage_count DESC
-        '''
-        operator_usage = db.execute(operator_usage_query, usage_date_params).fetchall()
-    except Exception as e:
-        print(f"获取操作人员使用统计错误: {e}")
-        operator_usage = []
-    
-    # 新增: 产品和操作人员交叉统计
-    try:
-        cross_usage_query = '''
-            SELECT 
-                o.name as operator_name,
-                p.name as product_name,
-                COUNT(cpu.id) as usage_count,
-                SUM(cpu.amount_used) as total_used,
-                COUNT(DISTINCT c.id) as client_count,
-                MAX(cpu.usage_date) as last_usage_date
-            FROM operators o
-            JOIN client_product_usage cpu ON o.id = cpu.operator_id
-            JOIN client_product cp ON cpu.client_product_id = cp.id
-            JOIN product p ON cp.product_id = p.id
-            JOIN client c ON cp.client_id = c.id
-            WHERE 1=1 ''' + usage_date_filter + '''
-            GROUP BY o.id, p.id
-            ORDER BY o.name, usage_count DESC
-        '''
-        cross_usage = db.execute(cross_usage_query, usage_date_params).fetchall()
-    except Exception as e:
-        print(f"获取产品和操作人员交叉统计错误: {e}")
-        cross_usage = []
-    
-    # 新增: 按产品分组的操作人员使用情况
-    try:
-        product_operator_query = '''
-            SELECT 
-                p.name as product_name,
-                o.name as operator_name,
-                COUNT(cpu.id) as usage_count,
-                SUM(cpu.amount_used) as total_used,
-                COUNT(DISTINCT c.id) as client_count,
-                MAX(cpu.usage_date) as last_usage_date
-            FROM product p
-            JOIN client_product cp ON p.id = cp.product_id
-            JOIN client_product_usage cpu ON cp.id = cpu.client_product_id
-            JOIN operators o ON cpu.operator_id = o.id
-            JOIN client c ON cp.client_id = c.id
-            WHERE 1=1 ''' + usage_date_filter + '''
-            GROUP BY p.id, o.id
-            ORDER BY p.name, usage_count DESC
-        '''
-        product_operator = db.execute(product_operator_query, usage_date_params).fetchall()
-    except Exception as e:
-        print(f"获取按产品分组的操作人员使用情况错误: {e}")
-        product_operator = []
-    
-    # 新增：整合产品销售记录和操作人员信息的详细记录
-    try:
-        detailed_usage_query = '''
-            SELECT 
-                cp.id as record_id,
-                c.name as client_name,
-                p.name as product_name,
-                p.price,
-                cp.purchase_date,
-                o.name as operator_name,
-                o.position as operator_position,
-                COUNT(cpu.id) as usage_times,
-                SUM(cpu.amount_used) as amount_used,
-                cpu.usage_date as last_usage_date,
-                u.username as created_by
-            FROM client_product cp
-            JOIN client c ON cp.client_id = c.id
-            JOIN product p ON cp.product_id = p.id
-            LEFT JOIN client_product_usage cpu ON cp.id = cpu.client_product_id
-            LEFT JOIN operators o ON cpu.operator_id = o.id
-            LEFT JOIN user u ON (CASE WHEN EXISTS (SELECT 1 FROM pragma_table_info('client_product') WHERE name='created_by') 
-                                THEN cp.created_by ELSE c.user_id END) = u.id
-            WHERE 1=1 ''' + product_date_filter + '''
-            GROUP BY cp.id, o.id
-            ORDER BY cp.id DESC, usage_times DESC
-            LIMIT 50
-        '''
-        detailed_usage = db.execute(detailed_usage_query, product_date_params).fetchall()
-    except Exception as e:
-        print(f"获取详细使用记录错误: {e}")
-        detailed_usage = []
+    # 转换为字典
+    new_products_list = [dict_from_row(p) for p in new_products]
+    product_usages_list = [dict_from_row(u) for u in product_usages]
+    new_clients_list = [dict_from_row(c) for c in new_clients]
+    clients_by_creator_list = [dict_from_row(c) for c in clients_by_creator]
+    products_by_creator_list = [dict_from_row(p) for p in products_by_creator]
+    usages_by_operator_list = [dict_from_row(u) for u in usages_by_operator]
     
     return render_template(
-        'admin/statistics.html',
-        product_count=product_count,
-        client_count=client_count,
-        usage_count=usage_count,
-        creator_stats=creator_stats,
-        recent_clients=recent_clients,
-        recent_usages=recent_usages,
-        product_sales=product_sales,
-        product_sales_stats=product_sales_stats,
-        product_seller_stats=product_seller_stats,
-        product_usage=product_usage,
-        operator_usage=operator_usage,
-        cross_usage=cross_usage,
-        product_operator=product_operator,
-        detailed_usage=detailed_usage,
+        'admin_statistics.html',
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        new_products=new_products_list,
+        product_usages=product_usages_list,
+        new_clients=new_clients_list,
+        clients_by_creator=clients_by_creator_list,
+        products_by_creator=products_by_creator_list,
+        usages_by_operator=usages_by_operator_list
     )
 
+# 操作人员列表
 @app.route('/admin/operators')
 @login_required
 @admin_required
 def admin_operators():
     db = get_db()
     operators = db.execute(
-        'SELECT o.*, u.username, u.role FROM operators o '
-        'LEFT JOIN user u ON o.user_id = u.id '
+        'SELECT o.*, u.username as creator FROM operators o '
+        'LEFT JOIN user u ON o.created_by = u.id '
         'ORDER BY o.name'
     ).fetchall()
     
-    return render_template('operators/admin_operators.html', operators=operators)
+    return render_template('admin/operators.html', operators=operators)
+
+# 添加操作人员
 @app.route('/admin/operator/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -2380,12 +2821,6 @@ def add_operator():
     if request.method == 'POST':
         name = request.form['name']
         position = request.form.get('position', '')
-        user_id = request.form.get('user_id')
-        
-        # 如果user_id是空字符串，转换为None
-        if user_id == '':
-            user_id = None
-            
         error = None
         
         if not name:
@@ -2394,20 +2829,18 @@ def add_operator():
         if error is None:
             db = get_db()
             db.execute(
-                'INSERT INTO operators (name, position, user_id, created_by, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
-                (name, position, user_id, g.user.id if g.user else 1)
+                'INSERT INTO operators (name, position, created_by) VALUES (?, ?, ?)',
+                (name, position, g.user.id)
             )
             db.commit()
             flash('操作人员添加成功')
             return redirect(url_for('admin_operators'))
             
         flash(error)
-    
-    # 获取所有用户列表供选择
-    db = get_db()
-    users = db.execute('SELECT id, username, role FROM user ORDER BY username').fetchall()
-    
-    return render_template('operators/operator_form.html', users=users)
+        
+    return render_template('admin/operator_form.html')
+
+# 编辑操作人员
 @app.route('/admin/operator/edit/<int:operator_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -2421,12 +2854,6 @@ def edit_operator(operator_id):
     if request.method == 'POST':
         name = request.form['name']
         position = request.form.get('position', '')
-        user_id = request.form.get('user_id')
-        
-        # 如果user_id是空字符串，转换为None
-        if user_id == '':
-            user_id = None
-        
         error = None
         
         if not name:
@@ -2435,19 +2862,18 @@ def edit_operator(operator_id):
         if error is None:
             db = get_db()
             db.execute(
-                'UPDATE operators SET name = ?, position = ?, user_id = ? WHERE id = ?',
-                (name, position, user_id, operator_id)
+                'UPDATE operators SET name = ?, position = ? WHERE id = ?',
+                (name, position, operator_id)
             )
             db.commit()
             flash('操作人员信息更新成功')
             return redirect(url_for('admin_operators'))
             
         flash(error)
-    
-    # 获取所有用户列表供选择
-    users = db.execute('SELECT id, username, role FROM user ORDER BY username').fetchall()
-    
-    return render_template('operators/operator_form.html', operator=operator, users=users)
+        
+    return render_template('admin/operator_form.html', operator=operator)
+
+# 删除操作人员
 @app.route('/admin/operator/delete/<int:operator_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -2457,228 +2883,6 @@ def delete_operator(operator_id):
     db.commit()
     flash('操作人员已删除')
     return redirect(url_for('admin_operators'))
-
-@app.route('/products')
-@login_required
-@admin_required
-def products():
-    """显示所有产品的列表"""
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute(
-        'SELECT id, name, description, type, price, category, details, '
-        'CASE WHEN type = "count" THEN sessions ELSE validity_days END as count_or_validity '
-        'FROM product ORDER BY id DESC'
-    )
-    products = [dict(zip([column[0] for column in cursor.description], row)) for row in cursor.fetchall()]
-    
-    return render_template('products.html', products=products)
-
-@app.route('/product/add', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def add_product():
-    """添加新产品"""
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        price = float(request.form['price'])
-        product_type = request.form['type']
-        category = request.form['category']
-        details = request.form['details']
-        
-        # 根据产品类型处理次数或有效期
-        if product_type == 'count':
-            default_count = int(request.form['default_count'])
-            sessions = int(request.form['sessions'])
-            default_days = 0
-            validity_days = 0
-        else:  # 期限卡
-            default_count = 0
-            sessions = int(request.form.get('sessions', 0))
-            default_days = int(request.form['default_days'])
-            validity_days = int(request.form['validity_days'])
-        
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute(
-            'INSERT INTO product (name, description, type, price, default_count, default_days, '
-            'category, details, validity_days, sessions) '
-            'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (name, description, product_type, price, default_count, default_days, 
-             category, details, validity_days, sessions)
-        )
-        db.commit()
-        
-        flash('产品添加成功！', 'success')
-        return redirect(url_for('products'))
-    
-    return render_template('add_product.html')
-
-@app.route('/product/edit/<int:product_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def edit_product(product_id):
-    """编辑产品"""
-    db = get_db()
-    cursor = db.cursor()
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        price = float(request.form['price'])
-        product_type = request.form['type']
-        category = request.form['category']
-        details = request.form['details']
-        
-        # 根据产品类型处理次数或有效期
-        if product_type == 'count':
-            default_count = int(request.form['default_count'])
-            sessions = int(request.form['sessions'])
-            default_days = 0
-            validity_days = 0
-        else:  # 期限卡
-            default_count = 0
-            sessions = int(request.form.get('sessions', 0))
-            default_days = int(request.form['default_days'])
-            validity_days = int(request.form['validity_days'])
-        
-        cursor.execute(
-            'UPDATE product SET name = ?, description = ?, type = ?, price = ?, '
-            'default_count = ?, default_days = ?, category = ?, details = ?, '
-            'validity_days = ?, sessions = ? WHERE id = ?',
-            (name, description, product_type, price, default_count, default_days, 
-             category, details, validity_days, sessions, product_id)
-        )
-        db.commit()
-        
-        flash('产品更新成功！', 'success')
-        return redirect(url_for('products'))
-    
-    # 获取产品信息用于表单预填充
-    cursor.execute('SELECT * FROM product WHERE id = ?', (product_id,))
-    product = dict(zip([column[0] for column in cursor.description], cursor.fetchone()))
-    
-    return render_template('edit_product.html', product=product)
-
-@app.route('/product/delete/<int:product_id>', methods=['POST'])
-@login_required
-@admin_required
-def delete_product(product_id):
-    """删除产品"""
-    db = get_db()
-    cursor = db.cursor()
-    
-    # 检查产品是否已分配给客户
-    cursor.execute('SELECT COUNT(*) FROM client_product WHERE product_id = ?', (product_id,))
-    if cursor.fetchone()[0] > 0:
-        flash('无法删除产品，该产品已分配给客户使用。请先移除所有相关客户的产品记录。', 'danger')
-        return redirect(url_for('products'))
-    
-    cursor.execute('DELETE FROM product WHERE id = ?', (product_id,))
-    db.commit()
-    
-    flash('产品已成功删除！', 'success')
-    return redirect(url_for('products'))
-
-@app.route('/client/logout')
-def client_logout():
-    if 'client_id' in session:
-        session.pop('client_id', None)
-        flash('您已成功退出', 'success')
-    return redirect(url_for('index'))
-
-@app.route('/client/login', methods=['GET', 'POST'])
-def client_login():
-    if 'client_id' in session:
-        return redirect(url_for('client_dashboard'))
-        
-    if request.method == 'POST':
-        phone = request.form.get('phone')
-        password = request.form.get('password')
-        
-        if not phone or not password:
-            flash('请输入手机号和密码', 'danger')
-            return render_template('client_login.html')
-            
-        conn = get_db()
-        # 查找用户账号（使用手机号作为用户名）
-        user = conn.execute('SELECT * FROM user WHERE username = ? AND role = "client"', (phone,)).fetchone()
-        
-        if user and check_password_hash(user['password_hash'], password):
-            # 检查是否有关联的客户ID
-            if user['client_id']:
-                # 获取客户信息
-                client = conn.execute('SELECT * FROM client WHERE id = ?', (user['client_id'],)).fetchone()
-                if client:
-                    session['client_id'] = client['id'] 
-                    session['client_name'] = client['name']
-                    session['is_client'] = True
-                    flash(f'欢迎回来，{client["name"]}！', 'success')
-                    return redirect(url_for('client_dashboard'))
-            
-            flash('账户异常，请联系管理员', 'danger')
-        else:
-            flash('手机号或密码错误', 'danger')
-        
-        conn.close()
-            
-    return render_template('client_login.html')
-
-def login_or_client_required(view):
-    """允许已登录的管理员或相关客户访问"""
-    @functools.wraps(view)
-    def wrapped_view(client_id, **kwargs):
-        # 检查是否是管理员登录
-        if current_user.is_authenticated:
-            return view(client_id, **kwargs)
-        
-        # 检查是否是客户登录
-        if 'client_id' in session and session.get('client_id') == client_id:
-            return view(client_id, **kwargs)
-            
-        # 如果既不是管理员也不是相关客户，则重定向到登录页面
-        flash('请先登录后再访问', 'warning')
-        return redirect(url_for('client_login'))
-    
-    return wrapped_view
-
-@app.route('/client/<int:client_id>/weight_managements')
-@login_required
-def view_weight_managements(client_id):
-    # 获取客户信息
-    conn = get_db()
-    client = conn.execute('SELECT * FROM client WHERE id = ?', (client_id,)).fetchone()
-    
-    if not client:
-        conn.close()
-        flash('客户不存在', 'danger')
-        return redirect(url_for('dashboard'))
-    
-    # 将客户信息转为字典
-    client_dict = dict_from_row(client)
-    
-    # 获取体重管理记录，按日期降序排列
-    managements = conn.execute('''
-        SELECT * FROM weight_management 
-        WHERE client_id = ? 
-        ORDER BY record_date DESC
-    ''', (client_id,)).fetchall()
-    
-    # 将记录转换为字典列表并处理日期
-    management_list = []
-    for m in managements:
-        management_dict = dict_from_row(m)
-        management_dict['before_weight'] = float(management_dict['before_weight']) if management_dict['before_weight'] else 0.0
-        management_dict['after_weight'] = float(management_dict['after_weight']) if management_dict['after_weight'] else 0.0
-        management_list.append(management_dict)
-    
-    conn.close()
-    return render_template('weight_managements.html', 
-                          client=client_dict, 
-                          weight_managements=management_list)
-
-# 客户面板路由
 
 if __name__ == '__main__':
     # 确保数据库已初始化

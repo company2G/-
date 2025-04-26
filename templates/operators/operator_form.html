@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}{% if operator %}编辑操作人员{% else %}添加操作人员{% endif %}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">{% if operator %}编辑操作人员{% else %}添加操作人员{% endif %}</h5>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label for="name" class="form-label">姓名</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ operator['name'] if operator else '' }}" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="position" class="form-label">职位</label>
+            <input type="text" class="form-control" id="position" name="position" value="{{ operator['position'] if operator else '' }}">
+          </div>
+          
+          <div class="mb-3">
+            <label for="user_id" class="form-label">关联系统用户</label>
+            <select class="form-control" id="user_id" name="user_id">
+              <option value="">-- 不关联用户 --</option>
+              {% for user in users %}
+                <option value="{{ user['id'] }}" {% if operator and operator['user_id'] == user['id'] %}selected{% endif %}>
+                  {{ user['username'] }} ({{ user['role'] }})
+                </option>
+              {% endfor %}
+            </select>
+            <small class="form-text text-muted">
+              关联用户后，该用户可以被选为操作人员。
+            </small>
+          </div>
+          
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin_operators') }}" class="btn btn-secondary">返回</a>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
