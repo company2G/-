@@ -1,0 +1,244 @@
+PS I:\bettest\禾燃客户管理> & i:/bettest/禾燃客户管理/.venv/Scripts/python.exe i:/bettest/禾燃客户管理/db_inspector.py
+尝试连接数据库: I:\bettest\禾燃客户管理\database.db
+
+==== 数据库表结构 ====    
+
+
+表名: user
+字段:
+  - id (INTEGER) (主键)   
+  - username (TEXT)       
+  - password_hash (TEXT)  
+  - role (TEXT)
+  - client_id (INTEGER)   
+  - name (TEXT)
+  - phone (TEXT)
+  - email (TEXT)
+  - created_at (TIMESTAMP)
+  - last_login (TIMESTAMP)
+行数: 6
+
+表名: sqlite_sequence     
+字段:
+  - name ()
+  - seq ()
+行数: 12
+
+表名: product
+字段:
+  - id (INTEGER) (主键)
+  - name (TEXT)
+  - description (TEXT)
+  - type (TEXT)
+  - price (REAL)
+  - default_count (INTEGER)
+  - default_days (INTEGER)
+  - category (TEXT)
+  - details (TEXT)
+  - validity_days (INTEGER)
+  - sessions (INTEGER)
+行数: 12
+
+表名: client_product
+字段:
+  - id (INTEGER) (主键)
+  - client_id (INTEGER)
+  - product_id (INTEGER)
+  - purchase_date (TEXT)
+  - start_date (TEXT)
+  - remaining_count (INTEGER)
+  - expiry_date (TEXT)
+  - status (TEXT)
+  - notes (TEXT)
+  - created_at (TEXT)
+  - updated_at (TEXT)
+  - payment_method (TEXT)
+  - discount_rate (REAL)
+  - original_price (REAL)
+  - actual_paid (REAL)
+行数: 1
+
+表名: product_usage
+字段:
+  - id (INTEGER) (主键)
+  - client_product_id (INTEGER)
+  - usage_date (TEXT)
+  - count_used (INTEGER)
+  - notes (TEXT)
+  - operator_id (INTEGER)
+  - created_at (TEXT)
+行数: 1
+
+表名: weight_record
+字段:
+  - id (INTEGER) (主键)
+  - record_date (TEXT)
+  - morning_weight (REAL)
+  - breakfast (TEXT)
+  - lunch (TEXT)
+  - dinner (TEXT)
+  - defecation (INTEGER)
+  - daily_change (REAL)
+  - total_change (REAL)
+  - client_id (INTEGER)
+  - created_at (TEXT)
+行数: 3
+
+表名: weight_management
+字段:
+  - id (INTEGER) (主键)
+  - sequence (INTEGER)
+  - record_date (TEXT)
+  - before_weight (REAL)
+  - after_weight (REAL)
+  - measurements (TEXT)
+  - notes (TEXT)
+  - client_id (INTEGER)
+  - created_at (TEXT)
+行数: 2
+
+表名: appointment
+字段:
+  - id (INTEGER) (主键)
+  - client_id (INTEGER)
+  - client_product_id (INTEGER)
+  - appointment_date (TEXT)
+  - appointment_time (TEXT)
+  - status (TEXT)
+  - notes (TEXT)
+  - created_at (TEXT)
+  - updated_at (TEXT)
+  - confirmed_by (INTEGER)
+行数: 0
+
+表名: operators
+字段:
+  - id (INTEGER) (主键)
+  - name (TEXT)
+  - position (TEXT)
+  - created_at (TIMESTAMP)
+  - created_by (INTEGER)
+  - user_id (INTEGER)
+行数: 1
+
+表名: client_product_usage
+字段:
+  - id (INTEGER) (主键)
+  - client_product_id (INTEGER)
+  - amount_used (INTEGER)
+  - usage_date (TIMESTAMP)
+  - notes (TEXT)
+  - user_id (INTEGER)
+  - operator_id (INTEGER)
+行数: 1
+
+表名: client
+字段:
+  - id (INTEGER) (主键)
+  - name (TEXT)
+  - gender (TEXT)
+  - age (INTEGER)
+  - phone (TEXT)
+  - address (TEXT)
+  - workplace (TEXT)
+  - breakfast (TEXT)
+  - lunch (TEXT)
+  - dinner (TEXT)
+  - night_snack (TEXT)
+  - cold_food (TEXT)
+  - sweet_food (TEXT)
+  - meat (TEXT)
+  - alcohol (TEXT)
+  - constitution (TEXT)
+  - water_drinking (TEXT)
+  - sleep (TEXT)
+  - defecation (TEXT)
+  - gynecology (TEXT)
+  - weight (REAL)
+  - height (REAL)
+  - waist (REAL)
+  - hip (REAL)
+  - leg (REAL)
+  - standard_weight (REAL)
+  - overweight (REAL)
+  - user_id (INTEGER)
+  - created_at (TEXT)
+  - updated_at (TEXT)
+  - balance (REAL)
+  - discount (REAL)
+行数: 1
+
+表名: report_records
+字段:
+  - id (INTEGER) (主键)
+  - user_id (INTEGER)
+  - report_type (TEXT)
+  - task_id (TEXT)
+  - file_path (TEXT)
+  - status (TEXT)
+  - error_message (TEXT)
+  - created_at (TEXT)
+行数: 2
+
+表名: notification_logs
+字段:
+  - id (INTEGER) (主键)
+  - client_id (INTEGER)
+  - appointment_id (INTEGER)
+  - type (TEXT)
+  - content (TEXT)
+  - status (TEXT)
+  - created_at (TEXT)
+行数: 0
+
+表名: client_settings
+字段:
+  - id (INTEGER) (主键)
+  - client_id (INTEGER)
+  - notification_type (TEXT)
+行数: 0
+
+表名: async_tasks
+字段:
+  - id (INTEGER) (主键)
+  - task_id (TEXT)
+  - task_type (TEXT)
+  - status (TEXT)
+  - params (TEXT)
+  - result (TEXT)
+  - error_message (TEXT)
+  - created_at (TEXT)
+  - completed_at (TEXT)
+行数: 0
+
+表名: sqlite_stat1
+字段:
+  - tbl ()
+  - idx ()
+  - stat ()
+行数: 21
+
+表名: report_templates
+字段:
+  - id (INTEGER) (主键)
+  - user_id (INTEGER)
+  - name (TEXT)
+  - config (TEXT)
+  - created_at (TIMESTAMP)
+行数: 0
+
+表名: balance_transaction
+字段:
+  - id (INTEGER) (主键)
+  - client_id (INTEGER)
+  - amount (REAL)
+  - transaction_type (TEXT)
+  - description (TEXT)
+  - before_balance (REAL)
+  - after_balance (REAL)
+  - operator_id (INTEGER)
+  - created_at (TIMESTAMP)
+行数: 2
+
+==== 数据库检查完成 ====
+PS I:\bettest\禾燃客户管理> 

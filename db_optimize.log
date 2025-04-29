@@ -1,0 +1,60 @@
+2025-04-27 21:53:39,967 - db_optimize - INFO - 数据库优化开始于: 2025-04-27 21:53:39.966976
+2025-04-27 21:53:39,968 - db_optimize - INFO - 开始数据库优化...
+2025-04-27 21:53:39,969 - db_optimize - ERROR - 创建索引 idx_client_name 时出错: no such table: main.client
+2025-04-27 21:53:39,970 - db_optimize - ERROR - 创建索引 idx_client_phone 时出错: no such table: main.client
+2025-04-27 21:53:39,971 - db_optimize - ERROR - 创建索引 idx_client_email 时出错: no such table: main.client
+2025-04-27 21:53:39,971 - db_optimize - ERROR - 创建索引 idx_client_created_at 时出错: no such table: main.client
+2025-04-27 21:53:39,972 - db_optimize - ERROR - 创建索引 idx_product_name 时出错: no such table: main.product
+2025-04-27 21:53:39,973 - db_optimize - ERROR - 创建索引 idx_product_category 时出错: no such table: main.product
+2025-04-27 21:53:39,973 - db_optimize - ERROR - 创建索引 idx_client_product_client_id 时出错: no such table: main.client_product
+2025-04-27 21:53:39,974 - db_optimize - ERROR - 创建索引 idx_client_product_product_id 时出错: no such table: main.client_product
+2025-04-27 21:53:39,975 - db_optimize - ERROR - 创建索引 idx_appointment_client_id 时出错: no such table: main.appointment
+2025-04-27 21:53:39,975 - db_optimize - ERROR - 创建索引 idx_appointment_date 时出错: no such table: main.appointment
+2025-04-27 21:53:39,976 - db_optimize - ERROR - 创建索引 idx_appointment_status 时出错: no such table: main.appointment
+2025-04-27 21:53:39,976 - db_optimize - ERROR - 创建索引 idx_user_username 时出错: no such table: main.user
+2025-04-27 21:53:39,977 - db_optimize - ERROR - 创建索引 idx_user_email 时出错: no such table: main.user
+2025-04-27 21:53:39,977 - db_optimize - ERROR - 创建索引 idx_report_type 时出错: no such table: main.report
+2025-04-27 21:53:39,978 - db_optimize - ERROR - 创建索引 idx_report_created_at 时出错: no such table: main.report
+2025-04-27 21:53:39,979 - db_optimize - ERROR - 创建索引 idx_notification_client_id 时出错: no such table: main.notification
+2025-04-27 21:53:39,979 - db_optimize - ERROR - 创建索引 idx_notification_appointment_id 时出错: no such table: main.notification
+2025-04-27 21:53:39,980 - db_optimize - ERROR - 创建索引 idx_notification_sent_at 时出错: no such table: main.notification
+2025-04-27 21:53:39,983 - db_optimize - INFO - 已执行ANALYZE命令更新统计信息
+2025-04-27 21:53:39,984 - db_optimize - INFO - 索引创建成功
+2025-04-27 21:53:39,987 - db_optimize - INFO - 已执行VACUUM命令优化数据库文件大小
+2025-04-27 21:53:39,987 - db_optimize - INFO - 数据库VACUUM操作成功
+2025-04-27 21:53:39,987 - db_optimize - INFO - 数据库优化完成
+2025-04-27 21:53:39,988 - db_optimize - INFO - 数据库优化结束于: 2025-04-27 21:53:39.988221, 总耗时: 0:00:00.021245
+2025-04-27 21:53:39,988 - db_optimize - INFO - 数据库优化成功完成
+2025-04-27 21:55:49,000 - db_optimize - INFO - 使用数据库: I:\bettest\禾燃客户管理\database.db
+2025-04-27 21:55:49,001 - db_optimize - INFO - 数据库优化开始于: 2025-04-27 21:55:49.001122
+2025-04-27 21:55:49,001 - db_optimize - INFO - 开始数据库优化...
+2025-04-27 21:55:49,002 - db_optimize - INFO - 数据库中存在的表: sqlite_sequence, user, product, client_product, product_usage, weight_record, weight_management, appointment, operators, client_product_usage, client, report_records, notification_logs, client_settings, async_tasks
+2025-04-27 21:55:49,006 - db_optimize - INFO - 已创建索引: idx_client_name 在表 client 上
+2025-04-27 21:55:49,010 - db_optimize - INFO - 已创建索引: idx_client_phone 在表 client 上
+2025-04-27 21:55:49,013 - db_optimize - INFO - 已创建索引: idx_client_created_at 在表 client 上
+2025-04-27 21:55:49,016 - db_optimize - INFO - 已创建索引: idx_product_name 在表 product 上
+2025-04-27 21:55:49,019 - db_optimize - INFO - 已创建索引: idx_product_type 在表 product 上
+2025-04-27 21:55:49,023 - db_optimize - INFO - 已创建索引: idx_client_product_client_id 在表 client_product 上
+2025-04-27 21:55:49,026 - db_optimize - INFO - 已创建索引: idx_client_product_product_id 在表 client_product 上
+2025-04-27 21:55:49,029 - db_optimize - INFO - 已创建索引: idx_client_product_purchase_date 在表 client_product 上
+2025-04-27 21:55:49,032 - db_optimize - INFO - 已创建索引: idx_appointment_client_id 在表 appointment 上
+2025-04-27 21:55:49,035 - db_optimize - INFO - 已创建索引: idx_appointment_date 在表 appointment 上
+2025-04-27 21:55:49,038 - db_optimize - INFO - 已创建索引: idx_appointment_status 在表 appointment 上
+2025-04-27 21:55:49,042 - db_optimize - INFO - 已创建索引: idx_user_username 在表 user 上
+2025-04-27 21:55:49,045 - db_optimize - INFO - 已创建索引: idx_user_role 在表 user 上
+2025-04-27 21:55:49,048 - db_optimize - INFO - 已创建索引: idx_report_records_user_id 在表 report_records 上
+2025-04-27 21:55:49,051 - db_optimize - INFO - 已创建索引: idx_report_records_status 在表 report_records 上
+2025-04-27 21:55:49,054 - db_optimize - INFO - 已创建索引: idx_notification_logs_client_id 在表 notification_logs 上
+2025-04-27 21:55:49,057 - db_optimize - INFO - 已创建索引: idx_notification_logs_appointment_id 在表 notification_logs 上
+2025-04-27 21:55:49,060 - db_optimize - INFO - 已创建索引: idx_weight_record_client_id 在表 weight_record 上
+2025-04-27 21:55:49,064 - db_optimize - INFO - 已创建索引: idx_weight_record_date 在表 weight_record 上
+2025-04-27 21:55:49,067 - db_optimize - INFO - 已创建索引: idx_async_tasks_task_id 在表 async_tasks 上
+2025-04-27 21:55:49,070 - db_optimize - INFO - 已创建索引: idx_async_tasks_status 在表 async_tasks 上
+2025-04-27 21:55:49,073 - db_optimize - INFO - 已执行ANALYZE命令更新统计信息
+2025-04-27 21:55:49,074 - db_optimize - INFO - 索引创建完成：共创建 21 个索引，跳过 0 个已存在索引
+2025-04-27 21:55:49,074 - db_optimize - INFO - 索引创建操作完成
+2025-04-27 21:55:49,081 - db_optimize - INFO - 已执行VACUUM命令优化数据库文件大小
+2025-04-27 21:55:49,082 - db_optimize - INFO - 数据库VACUUM操作成功
+2025-04-27 21:55:49,082 - db_optimize - INFO - 数据库优化完成
+2025-04-27 21:55:49,082 - db_optimize - INFO - 数据库优化结束于: 2025-04-27 21:55:49.082959, 总耗时: 0:00:00.081837
+2025-04-27 21:55:49,083 - db_optimize - INFO - 数据库优化成功完成

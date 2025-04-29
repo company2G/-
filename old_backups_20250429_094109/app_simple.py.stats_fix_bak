@@ -739,15 +739,15 @@ def use_client_product(client_id, client_product_id):
         error = None
         if not usage_amount or usage_amount <= 0:
             error = "使用次数必须为正数"
-        elif usage_amount > client_product['remaining_amount']:
+        elif usage_amount > client_product['remaining_count']:
             error = "使用次数不能超过剩余次数"
             
         if error is None:
-            new_remaining = client_product['remaining_amount'] - usage_amount
+            new_remaining = client_product['remaining_count'] - usage_amount
             
             # 更新客户产品剩余次数
             db.execute(
-                'UPDATE client_product SET remaining_amount = ? WHERE id = ?',
+                'UPDATE client_product SET remaining_count = ? WHERE id = ?',
                 (new_remaining, client_product_id)
             )
             
@@ -755,7 +755,7 @@ def use_client_product(client_id, client_product_id):
             db.execute(
                 'INSERT INTO client_product_usage (client_product_id, amount_used, notes, user_id, operator_id) '
                 'VALUES (?, ?, ?, ?, ?)',
-                (client_product_id, usage_amount, notes, g.user.id, operator_id)
+                (client_product_id, usage_amount, notes, (g.user.id if hasattr(g, 'user') and g.user is not None else 1), operator_id)
             )
             
             db.commit()
@@ -2690,130 +2690,141 @@ app.jinja_env.auto_reload = False  # 关闭自动重新加载
 @login_required
 @admin_required
 def admin_statistics():
-    """管理员统计面板"""
-    # 获取开始日期和结束日期参数，默认为过去7天
-    end_date = request.args.get('end_date', date.today().isoformat())
-    start_date = request.args.get('start_date', (date.today() - timedelta(days=7)).isoformat())
-    
-    # 尝试转换日期格式
-    try:
-        if isinstance(end_date, str):
-            end_date = date.fromisoformat(end_date)
-        if isinstance(start_date, str):
-            start_date = date.fromisoformat(start_date)
-    except ValueError:
-        flash('日期格式无效', 'danger')
-        end_date = date.today()
-        start_date = end_date - timedelta(days=7)
-    
-    # 如果开始日期大于结束日期，则交换
-    if start_date > end_date:
-        start_date, end_date = end_date, start_date
-    
     db = get_db()
     
+    # 获取筛选参数
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    
+    # 构建日期筛选条件
+    date_filter = ''
+    params = []
+    
+    if start_date:
+        date_filter += ' AND date(p.created_at) >= ?'
+        params.append(start_date)
+    
+    if end_date:
+        date_filter += ' AND date(p.created_at) <= ?'
+        params.append(end_date)
+    
     # 新增产品统计
-    new_products = db.execute('''
-        SELECT cp.created_at, p.name as product_name, c.name as client_name, 
-               u.username as creator_name, cp.notes
-        FROM client_product cp
-        JOIN product p ON cp.product_id = p.id
-        JOIN client c ON cp.client_id = c.id
-        JOIN user u ON c.user_id = u.id
-        WHERE date(cp.created_at) BETWEEN ? AND ?
-        ORDER BY cp.created_at DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    new_products = db.execute(
+        'SELECT p.*, u.username as creator_name '
+        'FROM product p '
+        'JOIN user u ON p.created_by = u.id '
+        f'WHERE 1=1 {date_filter} '
+        'ORDER BY p.created_at DESC', 
+        params
+    ).fetchall()
     
     # 产品使用统计
-    product_usages = db.execute('''
-        SELECT pu.usage_date, cp.client_id, c.name as client_name, 
-               p.name as product_name, pu.count_used, 
-               u.username as operator_name, pu.notes
-        FROM product_usage pu
-        JOIN client_product cp ON pu.client_product_id = cp.id
-        JOIN client c ON cp.client_id = c.id
-        JOIN product p ON cp.product_id = p.id
-        JOIN user u ON pu.operator_id = u.id
-        WHERE date(pu.usage_date) BETWEEN ? AND ?
-        ORDER BY pu.usage_date DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    usage_filter = ''
+    usage_params = []
+    
+    if start_date:
+        usage_filter += ' AND date(cpu.usage_date) >= ?'
+        usage_params.append(start_date)
+    
+    if end_date:
+        usage_filter += ' AND date(cpu.usage_date) <= ?'
+        usage_params.append(end_date)
+    
+    product_usage = db.execute(
+        'SELECT p.name, COUNT(cpu.id) as usage_count, SUM(cpu.amount_used) as total_used '
+        'FROM client_product_usage cpu '
+        'JOIN client_product cp ON cpu.client_product_id = cp.id '
+        'JOIN product p ON cp.product_id = p.id '
+        f'WHERE 1=1 {usage_filter} '
+        'GROUP BY p.id '
+        'ORDER BY total_used DESC',
+        usage_params
+    ).fetchall()
+    
+    # 操作人员使用统计
+    operator_usage = db.execute(
+        'SELECT o.id, o.name as operator_name, o.position, '
+        'COUNT(cpu.id) as usage_count, SUM(cpu.amount_used) as total_used, '
+        'COUNT(DISTINCT cp.client_id) as client_count, '
+        'COUNT(DISTINCT cp.product_id) as product_type_count '
+        'FROM client_product_usage cpu '
+        'JOIN operators o ON cpu.operator_id = o.id '
+        'JOIN client_product cp ON cpu.client_product_id = cp.id '
+        f'WHERE 1=1 {usage_filter} '
+        'GROUP BY o.id '
+        'ORDER BY total_used DESC',
+        usage_params
+    ).fetchall()
+    
+    # 无操作人员的使用记录统计（按记录人统计）
+    no_operator_usage = db.execute(
+        'SELECT u.id, u.username, u.role, '
+        'COUNT(cpu.id) as usage_count, SUM(cpu.amount_used) as total_used, '
+        'COUNT(DISTINCT cp.client_id) as client_count '
+        'FROM client_product_usage cpu '
+        'JOIN user u ON cpu.user_id = u.id '
+        'JOIN client_product cp ON cpu.client_product_id = cp.id '
+        f'WHERE cpu.operator_id IS NULL {usage_filter} '
+        'GROUP BY u.id '
+        'ORDER BY total_used DESC',
+        usage_params
+    ).fetchall()
     
     # 新增客户统计
-    new_clients = db.execute('''
-        SELECT c.created_at, c.name, c.phone, c.gender, c.age,
-               u.username as creator_name
-        FROM client c
-        JOIN user u ON c.user_id = u.id
-        WHERE date(c.created_at) BETWEEN ? AND ?
-        ORDER BY c.created_at DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    client_filter = ''
+    client_params = []
     
-    # 按创建者分组统计新增客户数量
-    clients_by_creator = db.execute('''
-        SELECT u.username as creator_name, COUNT(*) as client_count
-        FROM client c
-        JOIN user u ON c.user_id = u.id
-        WHERE date(c.created_at) BETWEEN ? AND ?
-        GROUP BY c.user_id
-        ORDER BY client_count DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    if start_date:
+        client_filter += ' AND date(c.created_at) >= ?'
+        client_params.append(start_date)
     
-    # 按创建者分组统计新增产品数量
-    products_by_creator = db.execute('''
-        SELECT u.username as creator_name, COUNT(*) as product_count
-        FROM client_product cp
-        JOIN client c ON cp.client_id = c.id
-        JOIN user u ON c.user_id = u.id
-        WHERE date(cp.created_at) BETWEEN ? AND ?
-        GROUP BY c.user_id
-        ORDER BY product_count DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    if end_date:
+        client_filter += ' AND date(c.created_at) <= ?'
+        client_params.append(end_date)
     
-    # 按操作者分组统计产品使用记录数量
-    usages_by_operator = db.execute('''
-        SELECT u.username as operator_name, COUNT(*) as usage_count
-        FROM product_usage pu
-        JOIN user u ON pu.operator_id = u.id
-        WHERE date(pu.usage_date) BETWEEN ? AND ?
-        GROUP BY pu.operator_id
-        ORDER BY usage_count DESC
-    ''', (start_date.isoformat(), end_date.isoformat())).fetchall()
+    new_clients = db.execute(
+        'SELECT c.*, u.username as creator_name '
+        'FROM client c '
+        'JOIN user u ON c.created_by = u.id '
+        f'WHERE 1=1 {client_filter} '
+        'ORDER BY c.created_at DESC',
+        client_params
+    ).fetchall()
     
-    # 转换为字典
-    new_products_list = [dict_from_row(p) for p in new_products]
-    product_usages_list = [dict_from_row(u) for u in product_usages]
-    new_clients_list = [dict_from_row(c) for c in new_clients]
-    clients_by_creator_list = [dict_from_row(c) for c in clients_by_creator]
-    products_by_creator_list = [dict_from_row(p) for p in products_by_creator]
-    usages_by_operator_list = [dict_from_row(u) for u in usages_by_operator]
+    # 归因统计 - 哪个员工带来了多少新客户
+    attribution_stats = db.execute(
+        'SELECT u.username, COUNT(c.id) as client_count '
+        'FROM client c '
+        'JOIN user u ON c.created_by = u.id '
+        f'WHERE 1=1 {client_filter} '
+        'GROUP BY c.created_by '
+        'ORDER BY client_count DESC',
+        client_params
+    ).fetchall()
     
     return render_template(
-        'admin_statistics.html',
+        'admin/statistics.html',
+        new_products=new_products,
+        product_usage=product_usage,
+        operator_usage=operator_usage,
+        no_operator_usage=no_operator_usage,
+        new_clients=new_clients,
+        attribution_stats=attribution_stats,
         start_date=start_date,
-        end_date=end_date,
-        new_products=new_products_list,
-        product_usages=product_usages_list,
-        new_clients=new_clients_list,
-        clients_by_creator=clients_by_creator_list,
-        products_by_creator=products_by_creator_list,
-        usages_by_operator=usages_by_operator_list
+        end_date=end_date
     )
-
-# 操作人员列表
 @app.route('/admin/operators')
 @login_required
 @admin_required
 def admin_operators():
     db = get_db()
     operators = db.execute(
-        'SELECT o.*, u.username as creator FROM operators o '
-        'LEFT JOIN user u ON o.created_by = u.id '
+        'SELECT o.*, u.username, u.role FROM operators o '
+        'LEFT JOIN user u ON o.user_id = u.id '
         'ORDER BY o.name'
     ).fetchall()
     
-    return render_template('admin/operators.html', operators=operators)
-
-# 添加操作人员
+    return render_template('operators/admin_operators.html', operators=operators)
 @app.route('/admin/operator/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -2821,6 +2832,12 @@ def add_operator():
     if request.method == 'POST':
         name = request.form['name']
         position = request.form.get('position', '')
+        user_id = request.form.get('user_id')
+        
+        # 如果user_id是空字符串，转换为None
+        if user_id == '':
+            user_id = None
+            
         error = None
         
         if not name:
@@ -2829,18 +2846,20 @@ def add_operator():
         if error is None:
             db = get_db()
             db.execute(
-                'INSERT INTO operators (name, position, created_by) VALUES (?, ?, ?)',
-                (name, position, g.user.id)
+                'INSERT INTO operators (name, position, user_id, created_by, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                (name, position, user_id, g.user.id if g.user else 1)
             )
             db.commit()
             flash('操作人员添加成功')
             return redirect(url_for('admin_operators'))
             
         flash(error)
-        
-    return render_template('admin/operator_form.html')
-
-# 编辑操作人员
+    
+    # 获取所有用户列表供选择
+    db = get_db()
+    users = db.execute('SELECT id, username, role FROM user ORDER BY username').fetchall()
+    
+    return render_template('operators/operator_form.html', users=users)
 @app.route('/admin/operator/edit/<int:operator_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -2854,6 +2873,12 @@ def edit_operator(operator_id):
     if request.method == 'POST':
         name = request.form['name']
         position = request.form.get('position', '')
+        user_id = request.form.get('user_id')
+        
+        # 如果user_id是空字符串，转换为None
+        if user_id == '':
+            user_id = None
+        
         error = None
         
         if not name:
@@ -2862,18 +2887,19 @@ def edit_operator(operator_id):
         if error is None:
             db = get_db()
             db.execute(
-                'UPDATE operators SET name = ?, position = ? WHERE id = ?',
-                (name, position, operator_id)
+                'UPDATE operators SET name = ?, position = ?, user_id = ? WHERE id = ?',
+                (name, position, user_id, operator_id)
             )
             db.commit()
             flash('操作人员信息更新成功')
             return redirect(url_for('admin_operators'))
             
         flash(error)
-        
-    return render_template('admin/operator_form.html', operator=operator)
-
-# 删除操作人员
+    
+    # 获取所有用户列表供选择
+    users = db.execute('SELECT id, username, role FROM user ORDER BY username').fetchall()
+    
+    return render_template('operators/operator_form.html', operator=operator, users=users)
 @app.route('/admin/operator/delete/<int:operator_id>', methods=['POST'])
 @login_required
 @admin_required

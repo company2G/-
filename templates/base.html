@@ -101,7 +101,7 @@
                     {% if current_user.is_authenticated %}
                         {% if current_user.is_admin %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin_operators') }}">
+                                <a class="nav-link" href="/admin/users">
                                     <i class="fas fa-users-cog"></i> 用户管理
                                 </a>
                             </li>
@@ -110,14 +110,21 @@
                                     <i class="fas fa-box"></i> 产品管理
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin_statistics') }}">
-                                    <i class="fas fa-chart-bar"></i> 统计报表
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-chart-bar"></i> 报表管理
                                 </a>
+                                <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin_statistics') }}">统计报表</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('operation_records') }}">操作记录</a></li>
+                                </ul>
                             </li>
                             {% if g.user and g.user.role == 'admin' %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ url_for('admin_operators') }}">操作人员管理</a>
+                                <a class="nav-link" href="{{ url_for('manage_users') }}">用户管理</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('manage_operators') }}">操作员管理</a>
                             </li>
                             {% endif %}
                         {% endif %}
@@ -138,7 +145,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('client_logout') }}">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
                                 <i class="fas fa-sign-out-alt"></i> 退出
                             </a>
                         </li>
@@ -147,7 +154,7 @@
                             <a class="nav-link" href="{{ url_for('login') }}">管理员登录</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('client_login') }}">客户登录</a>
+                            <a class="nav-link" href="/login">客户登录</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -167,7 +174,7 @@
                         <i class="bi bi-person-plus me-2"></i> 新增客户
                     </a>
                     {% if current_user.is_admin %}
-                    <a href="{{ url_for('admin_operators') }}" class="list-group-item list-group-item-action">
+                    <a href="/admin/users" class="list-group-item list-group-item-action">
                         <i class="bi bi-people me-2"></i> 用户管理
                     </a>
                     <a href="/products" class="list-group-item list-group-item-action">
@@ -176,11 +183,12 @@
                     <a href="{{ url_for('admin_manage_appointments') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-calendar-check me-2"></i> 预约管理
                     </a>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('admin_statistics') }}">
-                            <i class="fas fa-chart-bar"></i> 统计报表
-                        </a>
-                    </li>
+                    <a href="{{ url_for('admin_statistics') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-graph-up me-2"></i> 统计报表
+                    </a>
+                    <a href="{{ url_for('operation_records') }}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-journal-text me-2"></i> 操作记录
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -215,7 +223,7 @@
             <span>新增客户</span>
         </a>
         {% if current_user.is_admin %}
-        <a href="{{ url_for('admin_operators') }}">
+        <a href="/admin/users">
             <i class="bi bi-people"></i>
             <span>用户管理</span>
         </a>
@@ -228,8 +236,12 @@
             <span>预约管理</span>
         </a>
         <a href="{{ url_for('admin_statistics') }}">
-            <i class="fas fa-chart-bar"></i>
+            <i class="bi bi-graph-up"></i>
             <span>统计报表</span>
+        </a>
+        <a href="{{ url_for('operation_records') }}">
+            <i class="bi bi-journal-text"></i>
+            <span>操作记录</span>
         </a>
         {% endif %}
     </div>
@@ -237,6 +249,33 @@
 
     <!-- 延迟加载非关键JS -->
     <script src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // 确保所有Bootstrap组件正常初始化
+        $(document).ready(function() {
+            // 修复顶部导航栏的下拉菜单
+            var dropdownElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="dropdown"]'))
+            dropdownElementList.map(function (dropdownToggleEl) {
+                return new bootstrap.Dropdown(dropdownToggleEl)
+            });
+            
+            // 修复侧边栏的折叠菜单
+            var collapseElementList = [].slice.call(document.querySelectorAll('[data-bs-toggle="collapse"]'))
+            collapseElementList.map(function (collapseToggleEl) {
+                return new bootstrap.Collapse(collapseToggleEl.nextElementSibling, {toggle: false})
+            });
+            
+            // 确保移动端导航栏也能正常工作
+            var navbarToggler = document.querySelector('.navbar-toggler');
+            if(navbarToggler) {
+                navbarToggler.addEventListener('click', function() {
+                    var target = document.querySelector(this.dataset.target || this.getAttribute('data-bs-target'));
+                    if(target) {
+                        target.classList.toggle('show');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html> 

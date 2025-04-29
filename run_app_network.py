@@ -15,7 +15,7 @@ import sqlite3
 import shutil
 
 def get_ip_address():
-    """获取本机1111111111111111111111111111111111111111111111111IP地址"""
+    """获取本22222222222222222222222222222机IP地址"""
     try:
         # 创建一个临时套接字连接到一个公共服务器，获取本地IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -51,7 +51,7 @@ def wait_for_server(host, port, timeout=10):
         print(".", end="", flush=True)
 
 def init_db_manually():
-    """1111111111111111111111手动初始化数据库111111111111111111111111111111"""
+    """手动初始化数据库"""
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         schema_path = os.path.join(script_dir, 'schema.sql')

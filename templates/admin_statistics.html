@@ -6,6 +6,11 @@
 <div class="container mt-4">
     <h1 class="mb-4">管理员统计报表</h1>
     
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        详细的操作记录可在下方"操作记录统计"选项卡中查看，支持按操作员、客户、产品等条件筛选。
+    </div>
+    
     <!-- 日期筛选表单 -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
@@ -18,14 +23,14 @@
                         <div class="form-group">
                             <label for="start_date">开始日期:</label>
                             <input type="date" id="start_date" name="start_date" class="form-control ml-2" 
-                                   value="{{ start_date.isoformat() }}">
+                                   value="{{ start_date }}">
                         </div>
                     </div>
                     <div class="col-md-5">
                         <div class="form-group">
                             <label for="end_date">结束日期:</label>
                             <input type="date" id="end_date" name="end_date" class="form-control ml-2" 
-                                   value="{{ end_date.isoformat() }}">
+                                   value="{{ end_date }}">
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -79,6 +84,11 @@
         <li class="nav-item">
             <a class="nav-link" id="usages-tab" data-toggle="tab" href="#usages" role="tab">
                 产品使用统计
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="operations-tab" data-toggle="tab" href="#operations" role="tab">
+                操作记录统计
             </a>
         </li>
         <li class="nav-item">
@@ -314,6 +324,370 @@
                 </div>
             </div>
         </div>
+        
+        <!-- 操作记录统计 -->
+        <div class="tab-pane fade" id="operations" role="tabpanel">
+            <div class="card">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">操作记录统计</h5>
+                    <div>
+                        <span id="filterStatus" class="badge bg-info me-2" style="display:none;">已筛选</span>
+                        <button id="exportOperationsBtn" class="btn btn-sm btn-light">
+                            <i class="bi bi-download"></i> 导出Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- 筛选条件 -->
+                    <div class="mb-4">
+                        <form id="operationsFilterForm" class="row g-3">
+                            <input type="hidden" name="start_date" value="{{ start_date }}">
+                            <input type="hidden" name="end_date" value="{{ end_date }}">
+                            
+                            <div class="col-md-4">
+                                <label for="operator_id" class="form-label">操作员</label>
+                                <select class="form-select" id="operator_id" name="operator_id">
+                                    <option value="">全部操作员</option>
+                                    {% for operator in operators %}
+                                    <option value="{{ operator.id }}">{{ operator.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="client_id" class="form-label">客户</label>
+                                <select class="form-select" id="client_id" name="client_id">
+                                    <option value="">全部客户</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}">{{ client.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="product_id" class="form-label">产品</label>
+                                <select class="form-select" id="product_id" name="product_id">
+                                    <option value="">全部产品</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}">{{ product.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="operation_type" class="form-label">操作类型</label>
+                                <select class="form-select" id="operation_type" name="operation_type">
+                                    <option value="">全部类型</option>
+                                    <option value="purchase">购买产品</option>
+                                    <option value="usage">使用产品</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" id="filterOperationsBtn" class="btn btn-primary w-100">
+                                    <i class="bi bi-search me-1"></i> 查询
+                                </button>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" id="resetOperationsFilterBtn" class="btn btn-secondary w-100">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> 重置筛选
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- 统计摘要 -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">总操作次数</h5>
+                                    <h2 class="mb-0">{{ operations_stats.total_records }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">总操作客户数</h5>
+                                    <h2 class="mb-0">{{ operations_stats.total_clients }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body">
+                                    <h5 class="card-title">总操作产品数</h5>
+                                    <h2 class="mb-0">{{ operations_stats.total_products }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">总操作员数</h5>
+                                    <h2 class="mb-0">{{ operations_stats.total_operators }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 操作记录表格 -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>操作类型</th>
+                                    <th>操作员</th>
+                                    <th>客户</th>
+                                    <th>产品</th>
+                                    <th>操作数量</th>
+                                    <th>操作时间</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody id="operationsTableBody">
+                                {% for record in operation_records %}
+                                <tr>
+                                    <td>{{ record.id }}</td>
+                                    <td>
+                                        {% if record.operation_type == 'purchase' %}
+                                        <span class="badge bg-success">购买产品</span>
+                                        {% elif record.operation_type == 'usage' %}
+                                        <span class="badge bg-primary">使用产品</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">其他操作</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.operator_name }}</td>
+                                    <td>
+                                        <a href="{{ url_for('client_profile', client_id=record.client_id) }}" target="_blank">
+                                            {{ record.client_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ record.product_name }}</td>
+                                    <td>{{ record.quantity }}</td>
+                                    <td>{{ record.operation_time }}</td>
+                                    <td>{{ record.notes }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 分页控件 -->
+                    <nav aria-label="操作记录分页" class="mt-3" id="operationsPagination">
+                        <ul class="pagination justify-content-center">
+                            {% if operations_stats.pages > 1 %}
+                                {% for p in range(1, operations_stats.pages + 1) %}
+                                <li class="page-item {% if p == operations_stats.page %}active{% endif %}">
+                                    <a class="page-link operations-page" href="#" data-page="{{ p }}">{{ p }}</a>
+                                </li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 检查URL中是否有操作记录参数
+        if(window.location.hash === '#operations') {
+            $('#operations-tab').tab('show');
+            
+            // 从URL获取查询参数
+            var urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('client_id')) {
+                $('#client_id').val(urlParams.get('client_id'));
+            }
+            if(urlParams.has('product_id')) {
+                $('#product_id').val(urlParams.get('product_id'));
+            }
+            if(urlParams.has('operator_id')) {
+                $('#operator_id').val(urlParams.get('operator_id'));
+            }
+            if(urlParams.has('operation_type')) {
+                $('#operation_type').val(urlParams.get('operation_type'));
+            }
+            
+            // 立即加载筛选后的数据
+            loadOperationRecords(1);
+        }
+        
+        // 切换选项卡
+        $('a[data-toggle="tab"]').on('click', function (e) {
+            e.preventDefault();
+            $(this).tab('show');
+            // 更新URL中的hash
+            window.location.hash = $(this).attr('href');
+        });
+        
+        // 重置操作记录筛选功能
+        $('#resetOperationsFilterBtn').click(function() {
+            // 清空所有选择器
+            $('#operationsFilterForm select').val('');
+            // 隐藏筛选状态标签
+            $('#filterStatus').hide();
+            // 重新加载数据
+            loadOperationRecords(1);
+        });
+        
+        // 操作记录筛选功能
+        $('#filterOperationsBtn').click(function() {
+            // 检查是否有筛选条件
+            var hasFilter = false;
+            $('#operationsFilterForm select').each(function() {
+                if($(this).val()) {
+                    hasFilter = true;
+                    return false; // 跳出循环
+                }
+            });
+            
+            // 显示或隐藏筛选状态标签
+            if(hasFilter) {
+                $('#filterStatus').show();
+            } else {
+                $('#filterStatus').hide();
+            }
+            
+            // 加载筛选后的数据
+            loadOperationRecords(1);
+        });
+        
+        // 操作记录分页功能
+        $(document).on('click', '.operations-page', function(e) {
+            e.preventDefault();
+            loadOperationRecords($(this).data('page'));
+        });
+        
+        // 导出Excel功能
+        $('#exportOperationsBtn').click(function() {
+            // 获取当前筛选条件
+            var queryParams = $('#operationsFilterForm').serialize();
+            // 添加导出标记
+            queryParams += '&export=excel';
+            // 打开导出链接
+            window.location.href = "{{ url_for('admin_statistics') }}?" + queryParams;
+        });
+        
+        // 查询前添加加载指示器，并在按钮上显示加载状态
+        function loadOperationRecords(page) {
+            var form = $('#operationsFilterForm');
+            var params = form.serialize() + '&page=' + page + '&get_operations=1';
+            
+            // 显示加载状态
+            $('#filterOperationsBtn').prop('disabled', true).html('<i class="spinner-border spinner-border-sm"></i> 正在加载...');
+            
+            // 在表格上显示加载提示
+            $('#operationsTableBody').html('<tr><td colspan="8" class="text-center"><i class="spinner-border spinner-border-sm"></i> 正在加载数据...</td></tr>');
+            
+            $.ajax({
+                url: "{{ url_for('admin_statistics') }}",
+                data: params,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    // 更新统计摘要
+                    updateOperationsStats(response.stats);
+                    // 更新表格内容
+                    updateOperationsTable(response.records);
+                    // 更新分页
+                    updateOperationsPagination(response.stats);
+                    
+                    // 如果是按操作类型筛选，确保正确的badge颜色
+                    if($('#operation_type').val()) {
+                        var opType = $('#operation_type').val();
+                        console.log("筛选操作类型:", opType);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("请求失败:", error);
+                    $('#operationsTableBody').html('<tr><td colspan="8" class="text-center text-danger">加载失败: ' + error + '</td></tr>');
+                },
+                complete: function() {
+                    // 恢复按钮状态
+                    $('#filterOperationsBtn').prop('disabled', false).html('<i class="bi bi-search me-1"></i> 查询');
+                }
+            });
+        }
+        
+        function updateOperationsStats(stats) {
+            $('.card-title:contains("总操作次数")').closest('.card-body').find('h2').text(stats.total_records);
+            $('.card-title:contains("总操作客户数")').closest('.card-body').find('h2').text(stats.total_clients);
+            $('.card-title:contains("总操作产品数")').closest('.card-body').find('h2').text(stats.total_products);
+            $('.card-title:contains("总操作员数")').closest('.card-body').find('h2').text(stats.total_operators);
+        }
+        
+        function updateOperationsTable(records) {
+            var tbody = $('#operationsTableBody');
+            tbody.empty();
+            
+            if(records.length === 0) {
+                var emptyRow = '<tr><td colspan="8" class="text-center">没有找到符合条件的记录</td></tr>';
+                tbody.append(emptyRow);
+                return;
+            }
+            
+            console.log("收到记录:", records.length, "条数据");
+            
+            $.each(records, function(i, record) {
+                var badgeClass = record.operation_type == 'purchase' ? 'bg-success' : 'bg-primary';
+                var operationType = record.operation_type == 'purchase' ? '购买产品' : '使用产品';
+                var operatorName = record.operator_name ? record.operator_name : (record.username ? record.username : '未知');
+                
+                var row = '<tr>' +
+                    '<td>' + record.id + '</td>' +
+                    '<td><span class="badge ' + badgeClass + '">' + operationType + '</span></td>' +
+                    '<td>' + (operatorName || '-') + '</td>' +
+                    '<td><a href="/client/' + record.client_id + '/profile" target="_blank">' + record.client_name + '</a></td>' +
+                    '<td>' + record.product_name + '</td>' +
+                    '<td>' + (record.quantity || record.amount_used || 0) + '</td>' +
+                    '<td>' + record.operation_time + '</td>' +
+                    '<td>' + (record.notes || '') + '</td>' +
+                    '</tr>';
+                    
+                tbody.append(row);
+            });
+        }
+        
+        function updateOperationsPagination(stats) {
+            var pagination = $('#operationsPagination ul');
+            pagination.empty();
+            
+            if(stats.pages > 1) {
+                // 添加上一页按钮
+                var prevDisabled = stats.page <= 1 ? 'disabled' : '';
+                pagination.append(
+                    '<li class="page-item ' + prevDisabled + '">' +
+                    '<a class="page-link operations-page" href="#" data-page="' + (stats.page - 1) + '">&laquo;</a>' +
+                    '</li>'
+                );
+                
+                // 最多显示5个页码按钮
+                var startPage = Math.max(1, stats.page - 2);
+                var endPage = Math.min(stats.pages, startPage + 4);
+                
+                for(var i = startPage; i <= endPage; i++) {
+                    var isActive = i == stats.page ? 'active' : '';
+                    pagination.append(
+                        '<li class="page-item ' + isActive + '">' +
+                        '<a class="page-link operations-page" href="#" data-page="' + i + '">' + i + '</a>' +
+                        '</li>'
+                    );
+                }
+                
+                // 添加下一页按钮
+                var nextDisabled = stats.page >= stats.pages ? 'disabled' : '';
+                pagination.append(
+                    '<li class="page-item ' + nextDisabled + '">' +
+                    '<a class="page-link operations-page" href="#" data-page="' + (stats.page + 1) + '">&raquo;</a>' +
+                    '</li>'
+                );
+            }
+        }
+    });
+</script>
 {% endblock %} 

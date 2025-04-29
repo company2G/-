@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}添加操作人员{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">添加操作人员</h5>
+                </div>
+                <div class="card-body">
+                    {% for category, message in get_flashed_messages(with_categories=true) %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                    
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">选择用户 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">-- 请选择用户 --</option>
+                                {% for user in available_users %}
+                                    <option value="{{ user['id'] }}" {% if request.args.get('user_id')|int == user['id'] %}selected{% endif %}>
+                                        {{ user['username'] }} {% if user['name'] %}({{ user['name'] }}){% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">选择要添加为操作人员的用户</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">操作人员姓名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                            <div class="form-text">输入操作人员的姓名（可能与用户姓名不同）</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="position" class="form-label">职位</label>
+                            <input type="text" class="form-control" id="position" name="position">
+                            <div class="form-text">输入操作人员的职位或职务</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('manage_operators') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if not available_users %}
+                <div class="alert alert-warning mt-4">
+                    <p class="mb-0">没有可添加为操作人员的用户。请先通过用户管理页面创建新用户。</p>
+                    <a href="{{ url_for('add_user') }}" class="btn btn-outline-primary mt-2">添加新用户</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // 当选择用户时自动填充姓名
+    document.addEventListener('DOMContentLoaded', function() {
+        const userSelect = document.getElementById('user_id');
+        const nameInput = document.getElementById('name');
+        
+        userSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                // 从选项文本中提取姓名（如果有）
+                const text = selectedOption.text;
+                const match = text.match(/\((.*?)\)/);
+                if (match && match[1] && !nameInput.value) {
+                    nameInput.value = match[1];
+                } else if (!nameInput.value) {
+                    // 如果没有括号中的姓名，使用用户名
+                    nameInput.value = text.split(' ')[0];
+                }
+            }
+        });
+        
+        // 初始加载时触发一次
+        if (userSelect.selectedIndex > 0) {
+            userSelect.dispatchEvent(new Event('change'));
+        }
+    });
+</script>
+{% endblock %} 

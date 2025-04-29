@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑操作人员{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">编辑操作人员</h5>
+                </div>
+                <div class="card-body">
+                    {% for category, message in get_flashed_messages(with_categories=true) %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                    
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">关联用户 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">-- 请选择用户 --</option>
+                                {% for user in available_users %}
+                                    <option value="{{ user['id'] }}" {% if operator['user_id'] == user['id'] %}selected{% endif %}>
+                                        {{ user['username'] }} {% if user['name'] %}({{ user['name'] }}){% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">关联操作人员到系统用户账号</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">操作人员姓名 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ operator['name'] }}" required>
+                            <div class="form-text">操作人员的姓名</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="position" class="form-label">职位</label>
+                            <input type="text" class="form-control" id="position" name="position" value="{{ operator['position'] or '' }}">
+                            <div class="form-text">操作人员的职位或职务</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('manage_operators') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 保存修改
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">操作人员信息</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">ID:</dt>
+                        <dd class="col-sm-9">{{ operator['id'] }}</dd>
+                        
+                        <dt class="col-sm-3">创建时间:</dt>
+                        <dd class="col-sm-9">{{ operator['created_at'] }}</dd>
+                        
+                        {% if current_user %}
+                            <dt class="col-sm-3">当前关联用户:</dt>
+                            <dd class="col-sm-9">
+                                {{ current_user['username'] }} 
+                                {% if current_user['name'] %}
+                                    ({{ current_user['name'] }})
+                                {% endif %}
+                            </dd>
+                            
+                            {% if current_user['phone'] %}
+                                <dt class="col-sm-3">联系电话:</dt>
+                                <dd class="col-sm-9">{{ current_user['phone'] }}</dd>
+                            {% endif %}
+                            
+                            {% if current_user['email'] %}
+                                <dt class="col-sm-3">电子邮箱:</dt>
+                                <dd class="col-sm-9">{{ current_user['email'] }}</dd>
+                            {% endif %}
+                        {% else %}
+                            <dt class="col-sm-3">当前关联用户:</dt>
+                            <dd class="col-sm-9">
+                                <span class="text-muted">未关联用户</span>
+                            </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

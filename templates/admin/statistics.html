@@ -74,16 +74,16 @@
                                     <th>产品名称</th>
                                     <th>销售数量</th>
                                     <th>销售金额</th>
-                                    <th>总疗程数</th>
+                                    <th>平均价格</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for stat in product_sales_stats %}
                                 <tr>
-                                    <td>{{ stat.product_name }}</td>
-                                    <td>{{ stat.sales_count }}</td>
-                                    <td>¥{{ "%.2f"|format(stat.total_sales_amount or 0) }}</td>
-                                    <td>{{ stat.total_sessions_sold or 0 }}</td>
+                                    <td>{{ stat['product_name'] }}</td>
+                                    <td>{{ stat['sale_count'] }}</td>
+                                    <td>¥{{ "%.2f"|format(stat['total_amount'] or 0) }}</td>
+                                    <td>{{ "%.2f"|format(stat['avg_price'] or 0) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -111,18 +111,16 @@
                                     <th>用户名</th>
                                     <th>销售数量</th>
                                     <th>销售金额</th>
-                                    <th>产品种类</th>
                                     <th>客户数量</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for stat in product_seller_stats %}
                                 <tr>
-                                    <td>{{ stat.username }}</td>
-                                    <td>{{ stat.sales_count }}</td>
-                                    <td>¥{{ "%.2f"|format(stat.total_sales_amount or 0) }}</td>
-                                    <td>{{ stat.product_types }}</td>
-                                    <td>{{ stat.client_count }}</td>
+                                    <td>{{ stat['seller_name'] }}</td>
+                                    <td>{{ stat['sale_count'] }}</td>
+                                    <td>¥{{ "%.2f"|format(stat['total_amount'] or 0) }}</td>
+                                    <td>{{ stat['client_count'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -154,24 +152,20 @@
                                     <th>产品名称</th>
                                     <th>价格</th>
                                     <th>购买日期</th>
-                                    <th>开始日期</th>
-                                    <th>总疗程数</th>
-                                    <th>剩余疗程</th>
-                                    <th>创建人</th>
+                                    <th>支付方式</th>
+                                    <th>销售人员</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for sale in product_sales %}
                                 <tr>
-                                    <td>{{ sale.id }}</td>
-                                    <td>{{ sale.client_name }}</td>
-                                    <td>{{ sale.product_name }}</td>
-                                    <td>¥{{ "%.2f"|format(sale.price) }}</td>
-                                    <td>{{ sale.purchase_date }}</td>
-                                    <td>{{ sale.start_date }}</td>
-                                    <td>{{ sale.total_sessions }}</td>
-                                    <td>{{ sale.remaining_sessions }}</td>
-                                    <td>{{ sale.created_by }}</td>
+                                    <td>{{ sale['sale_id'] }}</td>
+                                    <td>{{ sale['client_name'] }}</td>
+                                    <td>{{ sale['product_name'] }}</td>
+                                    <td>¥{{ "%.2f"|format(sale['amount']) }}</td>
+                                    <td>{{ sale['sale_date'] }}</td>
+                                    <td>{{ sale['payment_method'] }}</td>
+                                    <td>{{ sale['sold_by'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -206,9 +200,9 @@
                             <tbody>
                                 {% for usage in product_usage %}
                                 <tr>
-                                    <td>{{ usage.name }}</td>
-                                    <td>{{ usage.usage_count }}</td>
-                                    <td>{{ usage.total_used }}</td>
+                                    <td>{{ usage['product_name'] }}</td>
+                                    <td>{{ usage['usage_count'] }}</td>
+                                    <td>{{ usage['total_used'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -244,12 +238,12 @@
                             <tbody>
                                 {% for op in operator_usage %}
                                 <tr>
-                                    <td>{{ op.operator_name }}</td>
-                                    <td>{{ op.position }}</td>
-                                    <td>{{ op.usage_count }}</td>
-                                    <td>{{ op.total_used }}</td>
-                                    <td>{{ op.client_count }}</td>
-                                    <td>{{ op.product_type_count }}</td>
+                                    <td>{{ op['operator_name'] }}</td>
+                                    <td>{{ op['position'] }}</td>
+                                    <td>{{ op['usage_count'] }}</td>
+                                    <td>{{ op['total_used'] }}</td>
+                                    <td>{{ op['client_count'] }}</td>
+                                    <td>{{ op['product_type_count'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -287,19 +281,19 @@
                             <tbody>
                                 {% set current_operator = '' %}
                                 {% for usage in cross_usage %}
-                                    {% if usage.operator_name != current_operator %}
-                                        {% set current_operator = usage.operator_name %}
+                                    {% if usage['operator_name'] != current_operator %}
+                                        {% set current_operator = usage['operator_name'] %}
                                         <tr class="table-secondary">
-                                            <td colspan="6"><strong>{{ usage.operator_name }}</strong></td>
+                                            <td colspan="6"><strong>{{ usage['operator_name'] }}</strong></td>
                                         </tr>
                                     {% endif %}
                                     <tr>
                                         <td></td>
-                                        <td>{{ usage.product_name }}</td>
-                                        <td>{{ usage.usage_count }}</td>
-                                        <td>{{ usage.total_used }}</td>
-                                        <td>{{ usage.client_count }}</td>
-                                        <td>{{ usage.last_usage_date }}</td>
+                                        <td>{{ usage['product_name'] }}</td>
+                                        <td>{{ usage['usage_count'] }}</td>
+                                        <td>{{ usage['total_used'] }}</td>
+                                        <td>{{ usage['client_count'] }}</td>
+                                        <td>{{ usage['last_usage_date'] }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -337,19 +331,19 @@
                             <tbody>
                                 {% set current_product = '' %}
                                 {% for usage in product_operator %}
-                                    {% if usage.product_name != current_product %}
-                                        {% set current_product = usage.product_name %}
+                                    {% if usage['product_name'] != current_product %}
+                                        {% set current_product = usage['product_name'] %}
                                         <tr class="table-info">
-                                            <td colspan="6"><strong>{{ usage.product_name }}</strong></td>
+                                            <td colspan="6"><strong>{{ usage['product_name'] }}</strong></td>
                                         </tr>
                                     {% endif %}
                                     <tr>
                                         <td></td>
-                                        <td>{{ usage.operator_name }}</td>
-                                        <td>{{ usage.usage_count }}</td>
-                                        <td>{{ usage.total_used }}</td>
-                                        <td>{{ usage.client_count }}</td>
-                                        <td>{{ usage.last_usage_date }}</td>
+                                        <td>{{ usage['operator_name'] }}</td>
+                                        <td>{{ usage['usage_count'] }}</td>
+                                        <td>{{ usage['total_used'] }}</td>
+                                        <td>{{ usage['client_count'] }}</td>
+                                        <td>{{ usage['last_usage_date'] }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -386,28 +380,59 @@
                                     <th>使用次数</th>
                                     <th>使用量</th>
                                     <th>上次使用日期</th>
-                                    <th>创建人</th>
+                                    <th>创建者</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for record in detailed_usage %}
                                 <tr>
-                                    <td>{{ record.record_id }}</td>
-                                    <td>{{ record.client_name }}</td>
-                                    <td>{{ record.product_name }}</td>
-                                    <td>{{ "%.2f"|format(record.price or 0) }}</td>
-                                    <td>{{ record.purchase_date }}</td>
-                                    <td>{{ record.operator_name or '-' }}</td>
-                                    <td>{{ record.operator_position or '-' }}</td>
-                                    <td>{{ record.usage_times or 0 }}</td>
-                                    <td>{{ record.amount_used or 0 }}</td>
-                                    <td>{{ record.last_usage_date or '-' }}</td>
-                                    <td>{{ record.created_by or '-' }}</td>
+                                    <td>{{ record['record_id'] }}</td>
+                                    <td>{{ record['client_name'] }}</td>
+                                    <td>{{ record['product_name'] }}</td>
+                                    <td>{{ "%.2f"|format(record['price'] or 0) }}</td>
+                                    <td>{{ record['purchase_date'] }}</td>
+                                    <td>{{ record['operator_name'] or '-' }}</td>
+                                    <td>{{ record['operator_position'] or '-' }}</td>
+                                    <td>{{ record['usage_times'] or 0 }}</td>
+                                    <td>{{ record['amount_used'] or 0 }}</td>
+                                    <td>{{ record['last_usage_date'] or '-' }}</td>
+                                    <td>{{ record['created_by'] or '-' }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    <script>
+                        // 等待DOM加载完成
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // 获取产品使用明细表格
+                            const detailedUsageTable = document.querySelector('.card-body:has(table:has(th:contains("记录ID"))) table');
+                            if (detailedUsageTable) {
+                                // 获取所有行
+                                const rows = detailedUsageTable.querySelectorAll('tbody tr');
+                                const seen = new Set();
+                                
+                                // 遍历每一行
+                                rows.forEach(row => {
+                                    // 获取关键字段：客户名称、产品名称、购买日期、操作人员
+                                    const clientName = row.cells[1].textContent.trim();
+                                    const productName = row.cells[2].textContent.trim();
+                                    const purchaseDate = row.cells[4].textContent.trim().split('T')[0]; // 只取日期部分，忽略时间
+                                    const operator = row.cells[5].textContent.trim();
+                                    
+                                    // 创建唯一键
+                                    const key = `${clientName}-${productName}-${purchaseDate}-${operator}`;
+                                    
+                                    // 如果已经看到过这个组合，则隐藏当前行
+                                    if (seen.has(key)) {
+                                        row.style.display = 'none';
+                                    } else {
+                                        seen.add(key);
+                                    }
+                                });
+                            }
+                        });
+                    </script>
                     {% else %}
                     <p class="text-center">暂无产品使用明细记录</p>
                     {% endif %}
@@ -430,7 +455,6 @@
                             <thead>
                                 <tr>
                                     <th>姓名</th>
-                                    <th>性别</th>
                                     <th>年龄</th>
                                     <th>电话</th>
                                     <th>操作</th>
@@ -439,12 +463,11 @@
                             <tbody>
                                 {% for client in recent_clients %}
                                 <tr>
-                                    <td>{{ client.name }}</td>
-                                    <td>{{ '女' if client.gender == 'female' else '男' }}</td>
-                                    <td>{{ client.age }}</td>
-                                    <td>{{ client.phone }}</td>
+                                    <td>{{ client['name'] }}</td>
+                                    <td>{{ client['age'] }}</td>
+                                    <td>{{ client['phone'] }}</td>
                                     <td>
-                                        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-sm btn-primary">
+                                        <a href="{{ url_for('view_client', client_id=client['id']) }}" class="btn btn-sm btn-primary">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </td>
@@ -479,8 +502,8 @@
                             <tbody>
                                 {% for stat in creator_stats %}
                                 <tr>
-                                    <td>{{ stat.username }}</td>
-                                    <td>{{ stat.client_count }}</td>
+                                    <td>{{ stat['user_name'] }}</td>
+                                    <td>{{ stat['client_count'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -516,14 +539,18 @@
                             <tbody>
                                 {% for usage in recent_usages %}
                                 <tr>
-                                    <td>{{ usage.id }}</td>
-                                    <td>{{ usage.usage_date }}</td>
+                                    <td>{{ usage['id'] }}</td>
+                                    <td>{{ usage['usage_date'] }}</td>
                                     <td>
-                                        <a href="{{ url_for('view_client', client_id=usage.client_id) }}">
-                                            {{ usage.client_name }}
-                                        </a>
+                                        {% if 'client_id' in usage and usage['client_id'] %}
+                                            <a href="{{ url_for('view_client', client_id=usage['client_id']) }}">
+                                                {{ usage['client_name'] }}
+                                            </a>
+                                        {% else %}
+                                            {{ usage['client_name'] }}
+                                        {% endif %}
                                     </td>
-                                    <td>{{ usage.product_name }}</td>
+                                    <td>{{ usage['product_name'] }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

@@ -15,19 +15,20 @@
       
       <form method="post">
         <div class="mb-3">
-          <label for="usage_amount" class="form-label">使用次数</label>
-          <input type="number" class="form-control" id="usage_amount" name="usage_amount" min="1" max="{{ client_product['remaining_count'] }}" required>
+          <label for="amount_used" class="form-label">使用次数</label>
+          <input type="number" class="form-control" id="amount_used" name="amount_used" min="1" max="{{ client_product['remaining_count'] }}" required>
         </div>
         
         <!-- 添加操作人员选择 -->
         <div class="mb-3">
-          <label for="operator_id" class="form-label">操作人员</label>
-          <select class="form-control" id="operator_id" name="operator_id">
+          <label for="operator_id" class="form-label">操作人员 <span class="text-danger">*</span></label>
+          <select class="form-control" id="operator_id" name="operator_id" required>
             <option value="">-- 选择操作人员 --</option>
             {% for operator in operators %}
               <option value="{{ operator['id'] }}">{{ operator['name'] }}{% if operator['position'] %} ({{ operator['position'] }}){% endif %}</option>
             {% endfor %}
           </select>
+          <small class="form-text text-muted">必须选择一个操作员</small>
         </div>
         
         <div class="mb-3">

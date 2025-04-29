@@ -6,9 +6,14 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>用户管理</h2>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> 返回首页
-        </a>
+        <div>
+            <a href="{{ url_for('add_user') }}" class="btn btn-primary me-2">
+                <i class="bi bi-person-plus"></i> 添加用户
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回首页
+            </a>
+        </div>
     </div>
 
     <div class="card">
@@ -22,9 +27,10 @@
                     <thead class="table-light">
                         <tr>
                             <th width="5%">#</th>
-                            <th width="30%">用户名</th>
+                            <th width="20%">用户名</th>
                             <th width="15%">角色</th>
-                            <th width="30%">客户数量</th>
+                            <th width="20%">姓名</th>
+                            <th width="20%">联系方式</th>
                             <th width="20%">操作</th>
                         </tr>
                     </thead>
@@ -36,30 +42,20 @@
                             <td>
                                 {% if user.role == 'admin' %}
                                 <span class="badge bg-danger">管理员</span>
+                                {% elif user.role == 'client' %}
+                                <span class="badge bg-info">客户用户</span>
                                 {% else %}
-                                <span class="badge bg-secondary">普通用户</span>
+                                <span class="badge bg-secondary">操作员</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <!-- 这里需要根据实际情况获取客户数量 -->
-                                计算中...
-                            </td>
+                            <td>{{ user.name or '未设置' }}</td>
+                            <td>{{ user.phone or '未设置' }}</td>
                             <td>
                                 {% if user.id != current_user.id %}
                                 <div class="btn-group" role="group">
-                                    <form action="{{ url_for('change_user_role', user_id=user.id) }}" method="post" class="me-2">
-                                        {% if user.role == 'admin' %}
-                                        <input type="hidden" name="role" value="user">
-                                        <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('确定要将此用户降级为普通用户吗？')">
-                                            <i class="bi bi-arrow-down-circle"></i> 降级为普通用户
-                                        </button>
-                                        {% else %}
-                                        <input type="hidden" name="role" value="admin">
-                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('确定要将此用户提升为管理员吗？')">
-                                            <i class="bi bi-arrow-up-circle"></i> 提升为管理员
-                                        </button>
-                                        {% endif %}
-                                    </form>
+                                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-info me-2">
+                                        <i class="bi bi-pencil"></i> 编辑
+                                    </a>
                                     <form action="{{ url_for('delete_user', user_id=user.id) }}" method="post">
                                         <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('警告：删除此用户将同时删除其所有客户数据，此操作不可撤销！确定要继续吗？')">
                                             <i class="bi bi-trash"></i> 删除
@@ -67,7 +63,9 @@
                                     </form>
                                 </div>
                                 {% else %}
-                                <span class="text-muted"><i class="bi bi-person-check"></i> 当前登录用户</span>
+                                <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-pencil"></i> 编辑
+                                </a>
                                 {% endif %}
                             </td>
                         </tr>

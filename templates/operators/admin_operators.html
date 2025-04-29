@@ -8,7 +8,7 @@
   <div class="container">
     <div class="row mb-4">
       <div class="col">
-        <a href="{{ url_for('add_operator') }}" class="btn btn-primary">添加操作人员</a>
+        <a href="/admin/users/add" class="btn btn-primary">添加操作人员</a>
       </div>
     </div>
     
@@ -46,8 +46,8 @@
                 </td>
                 <td>{{ operator['created_at'] }}</td>
                 <td>
-                  <a href="{{ url_for('edit_operator', operator_id=operator['id']) }}" class="btn btn-sm btn-outline-primary">编辑</a>
-                  <form action="{{ url_for('delete_operator', operator_id=operator['id']) }}" method="post" class="d-inline" onsubmit="return confirm('确定删除此操作人员吗？');">
+                  <a href="/admin/users/edit/{{ operator['id'] }}" class="btn btn-sm btn-outline-primary">编辑</a>
+                  <form action="/admin/users/delete/{{ operator['id'] }}" method="post" class="d-inline" onsubmit="return confirm('确定删除此操作人员吗？');">
                     <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
                   </form>
                 </td>

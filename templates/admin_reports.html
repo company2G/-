@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}报表管理{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>报表管理</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">生成新报表</h4>
+            <a href="{{ url_for('custom_report') }}" class="btn btn-outline-primary">
+                <i class="fas fa-tools"></i> 自定义报表设计
+            </a>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('request_statistics_report') }}" method="post">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="start_date">开始日期</label>
+                            <input type="date" name="start_date" id="start_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="end_date">结束日期</label>
+                            <input type="date" name="end_date" id="end_date" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="report_type">报表类型</label>
+                            <select name="report_type" id="report_type" class="form-control">
+                                <option value="statistics">统计报表</option>
+                                <option value="sales">销售报表</option>
+                                <option value="clients">客户报表</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">生成报表</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>数据导出</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">客户数据</h5>
+                            <p class="card-text">导出客户信息和消费记录</p>
+                            <div class="d-flex">
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-start-date" placeholder="开始日期">
+                                </div>
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-end-date" placeholder="结束日期">
+                                </div>
+                                <button class="btn btn-success export-btn" data-type="clients">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">产品数据</h5>
+                            <p class="card-text">导出产品信息和销售数据</p>
+                            <div class="d-flex">
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-start-date" placeholder="开始日期">
+                                </div>
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-end-date" placeholder="结束日期">
+                                </div>
+                                <button class="btn btn-success export-btn" data-type="products">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">使用记录</h5>
+                            <p class="card-text">导出产品使用记录和统计</p>
+                            <div class="d-flex">
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-start-date" placeholder="开始日期">
+                                </div>
+                                <div class="input-group me-2 date-range">
+                                    <input type="date" class="form-control export-end-date" placeholder="结束日期">
+                                </div>
+                                <button class="btn btn-success export-btn" data-type="usage">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h4>报表列表</h4>
+        </div>
+        <div class="card-body">
+            {% if reports %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>报表类型</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td>{{ report.id }}</td>
+                            <td>
+                                {% if report.report_type == 'statistics' %}
+                                统计报表
+                                {% elif report.report_type == 'sales' %}
+                                销售报表
+                                {% elif report.report_type == 'clients' %}
+                                客户报表
+                                {% elif report.report_type == 'custom' %}
+                                自定义报表
+                                {% elif report.report_type.startswith('export_') %}
+                                数据导出 - {{ report.report_type.split('_')[1] }}
+                                {% else %}
+                                {{ report.report_type }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if report.status == 'pending' %}
+                                <span class="badge bg-warning">生成中</span>
+                                {% elif report.status == 'completed' %}
+                                <span class="badge bg-success">已完成</span>
+                                {% elif report.status == 'failed' %}
+                                <span class="badge bg-danger">失败</span>
+                                {% else %}
+                                {{ report.status }}
+                                {% endif %}
+                            </td>
+                            <td>{{ report.created_at }}</td>
+                            <td>
+                                {% if report.status == 'completed' %}
+                                <a href="{{ url_for('download_report', report_id=report.id) }}" class="btn btn-sm btn-primary">下载</a>
+                                {% elif report.status == 'failed' %}
+                                <button class="btn btn-sm btn-secondary" disabled>下载</button>
+                                {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>下载</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                暂无报表记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 数据导出按钮点击事件
+        $('.export-btn').click(function() {
+            const type = $(this).data('type');
+            const card = $(this).closest('.card');
+            const startDate = card.find('.export-start-date').val();
+            const endDate = card.find('.export-end-date').val();
+            
+            // 构建导出URL
+            let url = "{{ url_for('export_data', export_type='TYPE') }}".replace('TYPE', type);
+            
+            // 添加日期参数
+            if (startDate) {
+                url += (url.includes('?') ? '&' : '?') + 'start_date=' + startDate;
+            }
+            if (endDate) {
+                url += (url.includes('?') ? '&' : '?') + 'end_date=' + endDate;
+            }
+            
+            // 导出
+            window.location.href = url;
+        });
+    });
+</script>
+{% endblock %} 

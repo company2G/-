@@ -1,6 +1,85 @@
 # 禾燃客户管理系统
 
-这是一个基于Flask的客户信息录入和管理系统，专为体重管理与健康咨询服务设计。该版本经过特别优化，兼容Python 3.13。
+禾燃客户管理系统是一个专为健康服务行业设计的客户管理解决方案，提供客户信息管理、产品管理、预约管理和统计报表等功能。
+
+## 系统优化更新
+
+系统进行了以下优化：
+
+1. SQL查询优化，提高了统计功能的性能
+2. 添加了异步任务处理，提高系统响应速度
+3. 实现了统计报表生成功能
+4. 添加了预约提醒自动/手动发送功能
+
+## 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+## 初始化数据库
+
+首次使用时需要初始化数据库：
+
+```bash
+python create_async_tables.py
+python db_optimize.py
+```
+
+## 启动方式
+
+### 1. 启动Redis（用于Celery消息队列）
+
+在Windows系统上，推荐使用WSL或Docker运行Redis：
+
+#### WSL方式：
+```bash
+sudo apt-get update
+sudo apt-get install redis-server
+sudo service redis-server start
+```
+
+#### Docker方式：
+```bash
+docker run -d -p 6379:6379 redis
+```
+
+### 2. 启动Celery Worker
+
+```bash
+celery -A app_simple.celery worker --loglevel=info
+```
+
+### 3. 启动Celery Beat（用于定时任务）
+
+```bash
+celery -A app_simple.celery beat --loglevel=info
+```
+
+### 4. 启动Web应用
+
+```bash
+python run_app_network.py
+```
+
+## 功能说明
+
+### 统计报表生成
+
+1. 访问【报表管理】页面
+2. 选择报表类型和日期范围
+3. 点击【生成报表】按钮
+4. 等待报表生成完成后，点击【下载】按钮获取报表
+
+### 预约提醒
+
+系统会自动在每天下午6点发送第二天的预约提醒。管理员也可以在【预约管理】页面手动触发发送提醒。
+
+## 注意事项
+
+1. 确保Redis服务器正常运行，否则异步任务将无法执行
+2. 定时任务依赖于Celery Beat服务，请确保它正常运行
+3. 首次使用时，请创建reports目录用于存放生成的报表
 
 ## 功能特点
 

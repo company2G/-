@@ -7,7 +7,19 @@
     <h1 class="my-4">为客户添加产品</h1>
     
     <div class="alert alert-info">
-        <strong>客户信息:</strong> {{ client.name }} ({{ client.phone }})
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-0"><strong>客户:</strong> {{ client.name }} ({{ client.phone }})</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <p class="mb-0">
+                    <strong>储值卡余额:</strong> 
+                    <span class="text-primary">¥ {{ client.balance|default(0)|float|round(2) }}</span> | 
+                    <strong>折扣率:</strong> 
+                    <span class="text-success">{{ (client.discount|default(1)|float * 100)|round|int }}%</span>
+                </p>
+            </div>
+        </div>
     </div>
     
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -19,40 +31,127 @@
     {% endwith %}
     
     <form method="post">
-        <div class="form-group">
-            <label for="product_id">选择产品 <span class="text-danger">*</span></label>
-            <select class="form-control" id="product_id" name="product_id" required>
-                <option value="">-- 请选择产品 --</option>
-                {% if products %}
-                    {% set current_category = '' %}
-                    {% for product in products %}
-                        {% if product.category != current_category %}
-                            {% if current_category != '' %}
-                                </optgroup>
-                            {% endif %}
-                            <optgroup label="{{ product.category }}">
-                            {% set current_category = product.category %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label for="product_id">选择产品 <span class="text-danger">*</span></label>
+                    <select class="form-control" id="product_id" name="product_id" required>
+                        <option value="">-- 请选择产品 --</option>
+                        {% if products %}
+                            {% set current_category = '' %}
+                            {% for product in products %}
+                                {% if product.category != current_category %}
+                                    {% if current_category != '' %}
+                                        </optgroup>
+                                    {% endif %}
+                                    <optgroup label="{{ product.category }}">
+                                    {% set current_category = product.category %}
+                                {% endif %}
+                                <option value="{{ product.id }}">
+                                    {{ product.name }} 
+                                    {% if product.price %}(¥{{ product.price }}){% endif %}
+                                    {% if product.type == 'count' and product.sessions %}
+                                        - {{ product.sessions }}次
+                                    {% elif product.type == 'period' and product.validity_days %}
+                                        - {{ product.validity_days }}天
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                            </optgroup>
+                        {% else %}
+                            <option value="" disabled>没有可用产品，请先添加产品</option>
                         {% endif %}
-                        <option value="{{ product.id }}">
-                            {{ product.name }} 
-                            {% if product.price %}(¥{{ product.price }}){% endif %}
-                            {% if product.type == 'count' and product.sessions %}
-                                - {{ product.sessions }}次
-                            {% elif product.type == 'period' and product.validity_days %}
-                                - {{ product.validity_days }}天
-                            {% endif %}
-                        </option>
-                    {% endfor %}
-                    </optgroup>
-                {% else %}
-                    <option value="" disabled>没有可用产品，请先添加产品</option>
-                {% endif %}
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="notes">备注</label>
-            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="purchase_date">购买日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ today_date }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="start_date">开始日期 <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ today_date }}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="notes">备注</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                </div>
+
+                <div class="form-group mb-3" id="operator_container">
+                    <label for="operator_id">关联操作员 <span class="text-danger">*</span></label>
+                    <select class="form-control" id="operator_id" name="operator_id" required>
+                        <option value="">-- 请选择操作员 --</option>
+                        {% for operator in operators %}
+                        <option value="{{ operator.id }}">{{ operator.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">请选择负责该产品交易的操作员</small>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">支付信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label>支付方式 <span class="text-danger">*</span></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" id="payment_cash" value="cash" checked>
+                                <label class="form-check-label" for="payment_cash">
+                                    现金支付
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="payment_method" id="payment_balance" value="balance" {{ 'disabled' if not client.balance or client.balance <= 0 }}>
+                                <label class="form-check-label" for="payment_balance">
+                                    储值卡支付
+                                    {% if not client.balance or client.balance <= 0 %}
+                                        <small class="text-danger">(余额不足)</small>
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="apply_discount" name="apply_discount">
+                                <label class="form-check-label" for="apply_discount">
+                                    应用客户折扣 ({{ (client.discount|float * 100)|round|int }}%)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="price-calculation mt-4 p-3 bg-light rounded">
+                            <h6>价格计算</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>原价:</span>
+                                <span id="original_price">¥ 0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between" id="discount_row" style="display: none;">
+                                <span>折扣 ({{ (client.discount|float * 100)|round|int }}%):</span>
+                                <span id="discount_amount">- ¥ 0.00</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <strong>实付金额:</strong>
+                                <strong id="final_price">¥ 0.00</strong>
+                            </div>
+                            <div id="balance_warning" class="mt-2 text-danger" style="display: none;">
+                                储值卡余额不足，请选择其他支付方式或充值
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="card mt-4 mb-4" id="productDetails" style="display:none;">
@@ -77,7 +176,7 @@
         </div>
         
         <div class="form-group">
-            <button type="submit" class="btn btn-primary">添加产品</button>
+            <button type="submit" class="btn btn-primary" id="submit_btn">添加产品</button>
             <a href="{{ url_for('client_products', client_id=client.id) }}" class="btn btn-secondary ml-2">取消</a>
         </div>
     </form>
@@ -85,53 +184,143 @@
 
 <script>
     // 当选择产品时显示产品详情
-    $(document).ready(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // 设置今天日期
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('purchase_date').value = today;
+        document.getElementById('start_date').value = today;
+        
         // 准备产品数据
-        const products = {
-            {% for product in products %}
-                "{{ product.id }}": {
-                    "name": "{{ product.name }}",
-                    "type": "{{ product.type }}",
-                    "price": "{{ product.price }}",
-                    "category": "{{ product.category }}",
-                    "description": "{{ product.description|default('无描述')|safe }}",
-                    "sessions": "{{ product.sessions }}",
-                    "validity_days": "{{ product.validity_days }}"
-                }{% if not loop.last %},{% endif %}
-            {% endfor %}
-        };
+        const products = JSON.parse('{{ products_json|safe }}');
+        
+        const clientBalance = {{ client.balance|float|default(0) }};
+        const clientDiscount = {{ client.discount|float|default(1) }};
+        
+        // 计算价格函数
+        function calculatePrice() {
+            const productId = document.getElementById('product_id').value;
+            const applyDiscount = document.getElementById('apply_discount').checked;
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+            
+            let originalPrice = 0;
+            let finalPrice = 0;
+            
+            if (productId && products[productId]) {
+                originalPrice = parseFloat(products[productId].price);
+                finalPrice = applyDiscount ? originalPrice * clientDiscount : originalPrice;
+            }
+            
+            // 更新显示
+            document.getElementById('original_price').textContent = '¥ ' + originalPrice.toFixed(2);
+            document.getElementById('discount_row').style.display = applyDiscount ? 'flex' : 'none';
+            document.getElementById('discount_amount').textContent = '- ¥ ' + (originalPrice - finalPrice).toFixed(2);
+            document.getElementById('final_price').textContent = '¥ ' + finalPrice.toFixed(2);
+            
+            // 检查余额是否足够
+            if (paymentMethod === 'balance' && finalPrice > clientBalance) {
+                document.getElementById('balance_warning').style.display = 'block';
+                document.getElementById('submit_btn').disabled = true;
+            } else {
+                document.getElementById('balance_warning').style.display = 'none';
+                document.getElementById('submit_btn').disabled = false;
+            }
+            
+            // 更新储值卡支付选项的可用性
+            const paymentBalanceRadio = document.getElementById('payment_balance');
+            if (finalPrice > clientBalance) {
+                paymentBalanceRadio.disabled = true;
+                // 如果储值卡支付选项当前被选中但余额不足，自动切换到现金支付
+                if (paymentBalanceRadio.checked) {
+                    document.getElementById('payment_cash').checked = true;
+                }
+            } else {
+                paymentBalanceRadio.disabled = false;
+            }
+            
+            // 处理操作员字段显示/隐藏
+            toggleOperatorField();
+        }
+        
+        // 处理操作员字段的显示与隐藏
+        function toggleOperatorField() {
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+            const operatorContainer = document.getElementById('operator_container');
+            const operatorSelect = document.getElementById('operator_id');
+            
+            if (paymentMethod === 'balance') {
+                // 使用储值卡支付时，隐藏操作员字段并移除required属性
+                operatorContainer.style.display = 'none';
+                operatorSelect.required = false;
+            } else {
+                // 使用现金支付时，显示操作员字段并添加required属性
+                operatorContainer.style.display = 'block';
+                operatorSelect.required = true;
+            }
+        }
+        
+        // 监听支付方式变化
+        document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                toggleOperatorField();
+                calculatePrice();
+            });
+        });
+        
+        // 初始调用一次确保页面加载时状态正确
+        toggleOperatorField();
         
         // 监听产品选择变化
-        $('#product_id').change(function() {
-            const productId = $(this).val();
+        document.getElementById('product_id').addEventListener('change', function() {
+            const productId = this.value;
             
             if (productId && products[productId]) {
                 const product = products[productId];
                 
                 // 填充产品详情
-                $('#productName').text(product.name);
-                $('#productType').text(product.type === 'count' ? '次数卡' : '期限卡');
-                $('#productPrice').text('¥' + product.price);
-                $('#productCategory').text(product.category);
-                $('#productDescription').text(product.description);
+                document.getElementById('productName').textContent = product.name;
+                document.getElementById('productType').textContent = product.type === 'count' ? '次数卡' : '期限卡';
+                document.getElementById('productPrice').textContent = '¥' + product.price;
+                document.getElementById('productCategory').textContent = product.category;
+                document.getElementById('productDescription').textContent = product.description;
                 
                 if (product.type === 'count') {
-                    $('#productSessions').text(product.sessions + '次');
-                    $('#productSessionRow').show();
-                    $('#productValidityRow').hide();
+                    document.getElementById('productSessions').textContent = product.sessions + '次';
+                    document.getElementById('productSessionRow').style.display = 'block';
+                    document.getElementById('productValidityRow').style.display = 'none';
                 } else {
-                    $('#productValidity').text(product.validity_days + '天');
-                    $('#productValidityRow').show();
-                    $('#productSessionRow').hide();
+                    document.getElementById('productValidity').textContent = product.validity_days + '天';
+                    document.getElementById('productValidityRow').style.display = 'block';
+                    document.getElementById('productSessionRow').style.display = 'none';
                 }
                 
                 // 显示产品详情卡片
-                $('#productDetails').fadeIn();
+                document.getElementById('productDetails').style.display = 'block';
+                
+                // 重新计算价格
+                calculatePrice();
+                
+                // 检查储值卡余额是否足够支付，考虑折扣
+                const applyDiscount = document.getElementById('apply_discount').checked;
+                const originalPrice = parseFloat(product.price);
+                const discountedPrice = applyDiscount ? originalPrice * clientDiscount : originalPrice;
+                
+                const paymentBalanceRadio = document.getElementById('payment_balance');
+                if (clientBalance >= discountedPrice) {
+                    paymentBalanceRadio.disabled = false;
+                } else {
+                    paymentBalanceRadio.disabled = true;
+                    if (paymentBalanceRadio.checked) {
+                        document.getElementById('payment_cash').checked = true;
+                    }
+                }
             } else {
                 // 隐藏产品详情卡片
-                $('#productDetails').hide();
+                document.getElementById('productDetails').style.display = 'none';
             }
         });
+        
+        // 监听折扣变化
+        document.getElementById('apply_discount').addEventListener('change', calculatePrice);
     });
 </script>
 {% endblock %} 

@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}操作记录{% endblock %}
+
+{% block content %}
+<div class="container-fluid pt-4 px-4">
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="bg-light rounded h-100 p-4">
+                <h5 class="mb-4">操作记录查询</h5>
+                
+                <!-- 筛选条件 -->
+                <form id="filterForm" method="get" action="{{ url_for('operation_records') }}">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="client_id">客户:</label>
+                                <select class="form-control" id="client_id" name="client_id">
+                                    <option value="">全部</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}" {% if request.args.get('client_id')|int == client.id %}selected{% endif %}>{{ client.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="product_id">产品:</label>
+                                <select class="form-control" id="product_id" name="product_id">
+                                    <option value="">全部</option>
+                                    {% for product in products %}
+                                    <option value="{{ product.id }}" {% if request.args.get('product_id')|int == product.id %}selected{% endif %}>{{ product.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="operator_id">操作人员:</label>
+                                <select class="form-control" id="operator_id" name="operator_id">
+                                    <option value="">全部</option>
+                                    {% for operator in operators %}
+                                    <option value="{{ operator.id }}" {% if request.args.get('operator_id')|int == operator.id %}selected{% endif %}>{{ operator.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="operation_type">操作类型:</label>
+                                <select class="form-control" id="operation_type" name="operation_type">
+                                    <option value="">全部</option>
+                                    <option value="usage" {% if request.args.get('operation_type') == 'usage' %}selected{% endif %}>使用产品</option>
+                                    <option value="purchase" {% if request.args.get('operation_type') == 'purchase' %}selected{% endif %}>购买产品</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="start_date">开始日期:</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="end_date">结束日期:</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary mt-4">查询</button>
+                            <button type="button" id="resetBtn" class="btn btn-secondary mt-4">重置</button>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% set export_args = request.args.copy() %}
+                            {% if 'export' in export_args %}
+                                {% set _ = export_args.pop('export') %}
+                            {% endif %}
+                            <a href="{{ url_for('operation_records', export='excel', **export_args) }}" class="btn btn-success mt-4">导出Excel</a>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- 统计信息 -->
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <strong>统计信息：</strong> 
+                            共 {{ operations_stats.total_count }} 条记录，
+                            涉及 {{ operations_stats.total_clients }} 位客户，
+                            {{ operations_stats.total_products }} 种产品，
+                            {{ operations_stats.total_operators }} 名操作人员
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 结果表格 -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>操作类型</th>
+                                <th>客户</th>
+                                <th>产品</th>
+                                <th>数量</th>
+                                <th>操作人员</th>
+                                <th>操作时间</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in operation_records %}
+                            <tr>
+                                <td>
+                                    {% if record.operation_type == 'usage' %}
+                                    <span class="badge bg-info">使用产品</span>
+                                    {% elif record.operation_type == 'purchase' %}
+                                    <span class="badge bg-success">购买产品</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ record.operation_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.client_name }}</td>
+                                <td>{{ record.product_name }}</td>
+                                <td>{{ record.quantity }}</td>
+                                <td>
+                                    {% if record.operator_name %}
+                                    {{ record.operator_name }}
+                                    {% elif record.username %}
+                                    {{ record.username }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.operation_time }}</td>
+                                <td>{{ record.notes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">没有找到符合条件的记录</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                {% if operations_stats.total_pages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {{ 'disabled' if page <= 1 else '' }}">
+                            <a class="page-link" href="{{ url_for('operation_records', page=page-1, **request.args) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% for p in range(1, operations_stats.total_pages + 1) %}
+                        <li class="page-item {{ 'active' if p == page else '' }}">
+                            <a class="page-link" href="{{ url_for('operation_records', page=p, **request.args) }}">{{ p }}</a>
+                        </li>
+                        {% endfor %}
+                        <li class="page-item {{ 'disabled' if page >= operations_stats.total_pages else '' }}">
+                            <a class="page-link" href="{{ url_for('operation_records', page=page+1, **request.args) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 重置按钮点击事件
+        $('#resetBtn').click(function() {
+            // 清空所有筛选条件
+            $('#client_id').val('');
+            $('#product_id').val('');
+            $('#operator_id').val('');
+            $('#operation_type').val('');
+            $('#start_date').val('');
+            $('#end_date').val('');
+            
+            // 提交表单
+            $('#filterForm').submit();
+        });
+        
+        // 日期范围快捷选择
+        function setDateRange(days) {
+            var endDate = new Date();
+            var startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            
+            $('#end_date').val(endDate.toISOString().split('T')[0]);
+            $('#start_date').val(startDate.toISOString().split('T')[0]);
+        }
+        
+        // 导出Excel
+        $('#exportExcel').click(function() {
+            // 收集当前的筛选条件
+            var queryParams = new URLSearchParams();
+            
+            // 添加所有筛选条件
+            if ($('#client_id').val()) queryParams.append('client_id', $('#client_id').val());
+            if ($('#product_id').val()) queryParams.append('product_id', $('#product_id').val());
+            if ($('#operator_id').val()) queryParams.append('operator_id', $('#operator_id').val());
+            if ($('#operation_type').val()) queryParams.append('operation_type', $('#operation_type').val());
+            if ($('#start_date').val()) queryParams.append('start_date', $('#start_date').val());
+            if ($('#end_date').val()) queryParams.append('end_date', $('#end_date').val());
+            
+            // 添加导出标志
+            queryParams.append('export', 'excel');
+            
+            // 跳转到导出URL
+            window.location.href = "{{ url_for('operation_records') }}?" + queryParams;
+        });
+    });
+</script>
+{% endblock %} 

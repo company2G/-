@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS client (
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     user_id INTEGER,
-    FOREIGN KEY (user_id) REFERENCES user (id)
+    FOREIGN KEY (user_id) REFERENCES user (id),
+    balance REAL DEFAULT 0.0,
+    discount REAL DEFAULT 1.0
 );
 
 -- 产品表
@@ -54,14 +56,18 @@ CREATE TABLE IF NOT EXISTS client_product (
     product_id INTEGER NOT NULL,
     purchase_date TEXT,
     start_date TEXT,
-    remaining_sessions INTEGER,
+    remaining_count INTEGER,
     expiry_date TEXT,
     status TEXT CHECK(status IN ('active', 'expired', 'used_up')),
     notes TEXT,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES client (id),
-    FOREIGN KEY (product_id) REFERENCES product (id)
+    FOREIGN KEY (product_id) REFERENCES product (id),
+    payment_method TEXT DEFAULT 'cash',  -- 'cash'现金，'balance'储值
+    discount_rate REAL DEFAULT 1.0,  -- 折扣率，1.0表示无折扣
+    original_price REAL,  -- 原价
+    actual_paid REAL
 );
 
 -- 产品使用记录表
@@ -259,4 +265,19 @@ CREATE TABLE IF NOT EXISTS notifications (
   error_message TEXT,  -- 失败原因
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   sent_at TIMESTAMP  -- 发送时间
+);
+
+-- 创建储值记录表
+CREATE TABLE IF NOT EXISTS balance_transaction (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    amount REAL NOT NULL,  -- 正数表示充值，负数表示消费
+    transaction_type TEXT NOT NULL,  -- 'recharge'充值，'purchase'消费，'refund'退款
+    description TEXT,
+    before_balance REAL,
+    after_balance REAL,
+    operator_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES client (id),
+    FOREIGN KEY (operator_id) REFERENCES user (id)
 ); 

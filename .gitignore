@@ -29,8 +29,8 @@ venv/
 ENV/
 
 # Database
-*.db
-*.sqlite3
+# *.db  # 注释掉以允许添加database.db
+# *.sqlite3  # 注释掉以允许添加sqlite3数据库
 
 # IDE
 .idea/

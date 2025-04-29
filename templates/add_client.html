@@ -56,10 +56,25 @@
                     </div>
                     <div class="col-md-4">
                         <div class="form-group">
+                            <label for="operator_id">关联操作员 <span class="text-danger">*</span></label>
+                            <select class="form-control" id="operator_id" name="operator_id" required>
+                                <option value="">请选择操作员</option>
+                                {% for operator in operators %}
+                                <option value="{{ operator.id }}">{{ operator.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">请选择负责该客户的操作员</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
                             <label for="address">家庭住址</label>
                             <input type="text" class="form-control" id="address" name="address">
                         </div>
                     </div>
+                </div>
+                
+                <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
                             <label for="workplace">工作单位</label>

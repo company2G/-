@@ -1,79 +1,62 @@
 {% extends 'base.html' %}
 
-{% block title %}添加新产品 - 禾燃客户管理系统{% endblock %}
+{% block title %}添加产品{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm my-4">
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">添加新产品</h4>
+                    <h3 class="mb-0">添加新产品</h3>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{{ url_for('add_product') }}">
+                    <form action="{{ url_for('add_product') }}" method="post">
                         <div class="mb-3">
                             <label for="name" class="form-label">产品名称 <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="description" class="form-label">产品描述 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="description" name="description" required>
-                            <small class="form-text text-muted">简要描述产品特点</small>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="price" class="form-label">价格 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">¥</span>
+                                    <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="type" class="form-label">产品类型 <span class="text-danger">*</span></label>
+                                <select class="form-select" id="type" name="type" required onchange="toggleFields()">
+                                    <option value="">-- 选择类型 --</option>
+                                    <option value="count">次数卡</option>
+                                    <option value="period">期限卡</option>
+                                </select>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="price" class="form-label">价格 (¥) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" class="form-control" id="price" name="price" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="type" class="form-label">产品类型 <span class="text-danger">*</span></label>
-                            <select class="form-select" id="type" name="type" onchange="toggleFields()" required>
-                                <option value="count">次数卡</option>
-                                <option value="period">期限卡</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="category" class="form-label">产品分类 <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="category" name="category" required>
-                            <small class="form-text text-muted">例如：热敷、塑形、疏通、体验卡等</small>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="category" class="form-label">分类</label>
+                                <input type="text" class="form-control" id="category" name="category">
+                            </div>
+                            <div class="col-md-6" id="sessionsField" style="display: none;">
+                                <label for="sessions" class="form-label">使用次数</label>
+                                <input type="number" class="form-control" id="sessions" name="sessions" min="1" value="1">
+                            </div>
+                            <div class="col-md-6" id="validityField" style="display: none;">
+                                <label for="validity_days" class="form-label">有效期（天）</label>
+                                <input type="number" class="form-control" id="validity_days" name="validity_days" min="1" value="30">
+                            </div>
                         </div>
                         
                         <div class="mb-3">
                             <label for="details" class="form-label">产品详情</label>
                             <textarea class="form-control" id="details" name="details" rows="3"></textarea>
-                            <small class="form-text text-muted">请填写产品的适用部位、效果等详细描述</small>
                         </div>
                         
-                        <div id="countField" class="mb-3">
-                            <label for="default_count" class="form-label">默认次数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="default_count" name="default_count" value="1" min="1">
-                            <small class="form-text text-muted">客户购买该产品默认获得的次数</small>
-                        </div>
-                        
-                        <div id="periodField" class="mb-3" style="display: none;">
-                            <label for="default_days" class="form-label">默认天数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="default_days" name="default_days" value="30" min="1">
-                            <small class="form-text text-muted">客户购买该产品默认有效的天数</small>
-                        </div>
-                        
-                        <div id="validityField" class="mb-3" style="display: none;">
-                            <label for="validity_days" class="form-label">有效期 (天) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="validity_days" name="validity_days" value="30" min="1">
-                            <small class="form-text text-muted">期限卡的有效天数，仅适用于期限卡</small>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="sessions" class="form-label">使用次数 <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="sessions" name="sessions" value="1" min="0">
-                            <small class="form-text text-muted">产品可使用的总次数，对期限卡也适用</small>
-                        </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ url_for('products') }}" class="btn btn-secondary me-md-2">取消</a>
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('manage_products') }}" class="btn btn-secondary me-md-2">取消</a>
                             <button type="submit" class="btn btn-primary">保存产品</button>
                         </div>
                     </form>
@@ -82,29 +65,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-function toggleFields() {
-    const typeSelect = document.getElementById('type');
-    const countField = document.getElementById('countField');
-    const periodField = document.getElementById('periodField');
-    const validityField = document.getElementById('validityField');
-    
-    if (typeSelect.value === 'count') {
-        countField.style.display = 'block';
-        periodField.style.display = 'none';
-        validityField.style.display = 'none';
-        document.getElementById('default_days').value = '0';
-        document.getElementById('validity_days').value = '0';
-    } else {
-        countField.style.display = 'none';
-        periodField.style.display = 'block';
-        validityField.style.display = 'block';
-        document.getElementById('default_count').value = '0';
+    function toggleFields() {
+        var type = document.getElementById('type').value;
+        var sessionsField = document.getElementById('sessionsField');
+        var validityField = document.getElementById('validityField');
+        
+        if (type === 'count') {
+            sessionsField.style.display = 'block';
+            validityField.style.display = 'none';
+        } else if (type === 'period') {
+            sessionsField.style.display = 'none';
+            validityField.style.display = 'block';
+        } else {
+            sessionsField.style.display = 'none';
+            validityField.style.display = 'none';
+        }
     }
-}
-
-// 页面加载完成后执行一次
-document.addEventListener('DOMContentLoaded', toggleFields);
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleFields();
+    });
 </script>
 {% endblock %} 
